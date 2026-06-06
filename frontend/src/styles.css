@@ -122,7 +122,7 @@ h3 {
 
 .app-frame {
   display: grid;
-  grid-template-columns: 204px minmax(0, 1fr);
+  grid-template-columns: clamp(180px, 15vw, 240px) minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -295,18 +295,28 @@ th {
 
 .view-stack {
   display: grid;
-  gap: 16px;
+  gap: 6px;
 }
 
 .view-intro {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
   border: 1px solid rgba(222, 245, 232, 0.14);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.055);
   padding: 16px;
+}
+
+.view-intro-title {
+  flex: 0 0 auto;
+  min-width: 190px;
+}
+
+.view-intro-title .eyebrow,
+.view-intro-title h2 {
+  white-space: nowrap;
 }
 
 .view-intro h2 {
@@ -348,7 +358,8 @@ th {
 
 .groups-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, auto);
   gap: 12px;
 }
 

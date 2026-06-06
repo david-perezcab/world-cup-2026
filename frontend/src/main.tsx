@@ -162,7 +162,6 @@ function App() {
     const url = `${window.location.origin}${window.location.pathname}#scenario=${encoded}`;
     await navigator.clipboard.writeText(url);
     window.history.replaceState(null, "", `#scenario=${encoded}`);
-    setShareStatus("Share link copied");
   }
 
   function validateFacts(): string | null {
@@ -249,7 +248,7 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">FIFA World Cup 2026</p>
-            <h1>Prediction Workbench</h1>
+            <h1>Prediction Lab</h1>
           </div>
         </header>
 
@@ -339,7 +338,7 @@ function Sidebar({
       <div className="side-card scenario-card">
         <span className="card-label">Scenario</span>
         <strong>{factCount}</strong>
-        <span>factual result{factCount === 1 ? "" : "s"} locked</span>
+        <span>result{factCount === 1 ? "" : "s"} locked</span>
       </div>
 
       <div className="side-card controls-card">
@@ -355,7 +354,7 @@ function Sidebar({
           />
         </label>
         <button className="primary" onClick={runPrediction} disabled={loading}>
-          {loading ? "Running..." : "Run Prediction"}
+          {loading ? "Running..." : "Generate"}
         </button>
       </div>
 
@@ -810,7 +809,7 @@ function PredictionsView({ prediction }: { prediction: Prediction | null }) {
 function ViewIntro({ title, detail, actions }: { title: string; detail: string; actions?: React.ReactNode }) {
   return (
     <section className="view-intro">
-      <div>
+      <div className="view-intro-title">
         <p className="eyebrow">Scenario control</p>
         <h2>{title}</h2>
       </div>
