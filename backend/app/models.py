@@ -22,7 +22,7 @@ class FactResult(BaseModel):
 
 
 class SimulationSettings(BaseModel):
-    simulations: int = Field(default=20_000, ge=100, le=50_000)
+    simulations: int = Field(default=20_000, ge=100, le=100_000)
     seed: int | None = Field(default=None, ge=0, le=2_147_483_647)
 
 

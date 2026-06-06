@@ -105,3 +105,8 @@ export type Prediction = {
     notes: string[];
   };
 };
+
+export type BaselinePrediction = Pick<
+  Prediction,
+  "data_version" | "settings" | "group_probabilities" | "round_probabilities" | "champion_probabilities"
+>;

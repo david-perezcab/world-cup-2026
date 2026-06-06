@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import json
+from pathlib import Path
 import secrets
 from typing import Any
 
 import numpy as np
 
-from .data_loader import Match, all_teams, build_groups, data_version, load_matches, load_ratings
+from .data_loader import DATA_DIR, Match, all_teams, build_groups, data_version, load_matches, load_ratings
 from .modeling import (
     MODEL_CARD,
     advancement_probability,
     simulate_score,
     win_draw_loss_probabilities,
 )
-from .models import FactResult, PredictRequest
+from .models import FactResult, PredictRequest, SimulationSettings
 from .rules import PlayedResult, rank_table, third_place_sort_key
 
 
@@ -28,6 +30,10 @@ STAGE_FOR_ROUND = {
     "Semi-final": "final",
     "Final": "champion",
 }
+
+BASELINE_SIMULATIONS = 100000
+BASELINE_SEED = 2142218442
+BASELINE_PATH = DATA_DIR / "baseline_prediction.json"
 
 
 def tournament_payload() -> dict[str, Any]:
@@ -107,6 +113,37 @@ def predict(request: PredictRequest) -> dict[str, Any]:
         "champion_probabilities": _format_champion_probabilities(stage_counts["champion"], simulations),
         "model": MODEL_CARD,
     }
+
+
+def baseline_prediction_payload() -> dict[str, Any]:
+    if BASELINE_PATH.exists():
+        payload = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+        if payload.get("data_version") == data_version():
+            return payload
+    return generate_baseline_prediction()
+
+
+def generate_baseline_prediction() -> dict[str, Any]:
+    prediction = predict(
+        PredictRequest(
+            facts=[],
+            settings=SimulationSettings(simulations=BASELINE_SIMULATIONS, seed=BASELINE_SEED),
+        )
+    )
+    return {
+        "data_version": prediction["data_version"],
+        "settings": prediction["settings"],
+        "group_probabilities": prediction["group_probabilities"],
+        "round_probabilities": prediction["round_probabilities"],
+        "champion_probabilities": prediction["champion_probabilities"],
+    }
+
+
+def write_baseline_prediction() -> Path:
+    payload = generate_baseline_prediction()
+    BASELINE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    BASELINE_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return BASELINE_PATH
 
 
 def _team_group(team: str, groups: dict[str, list[str]]) -> str:

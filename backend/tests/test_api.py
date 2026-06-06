@@ -40,6 +40,30 @@ def test_predict_accepts_locked_group_fact():
     assert mexico["points"] == 3
 
 
+def test_baseline_payload_is_available_and_matches_tournament_version():
+    tournament = client.get("/api/tournament").json()
+    response = client.get("/api/baseline")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data_version"] == tournament["data_version"]
+    assert payload["settings"]["simulations"] > 0
+    assert payload["champion_probabilities"]
+    assert payload["round_probabilities"]
+    assert payload["group_probabilities"]
+    assert "facts_used" not in payload
+    champion_total = sum(row["probability"] for row in payload["champion_probabilities"])
+    assert 0.99 <= champion_total <= 1.01
+
+
+def test_unknown_api_route_returns_json_404():
+    response = client.get("/api/not-real")
+
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["detail"] == "API route not found: /api/not-real"
+
+
 def test_tied_knockout_fact_requires_winner():
     response = client.post(
         "/api/predict",

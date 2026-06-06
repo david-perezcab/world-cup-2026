@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { buildButterflyEffect, formatSignedPercentPoints, type ButterflyEffect } from "./lib/butterfly";
 import { bracketLayout, buildKnockoutDisplayTeams, type BracketPosition, type DisplayTeams } from "./lib/bracket";
 import { flagLabelFor, flagUrlFor, isPlaceholderTeam, teamCodeFor } from "./lib/flags";
 import { completeFacts, encodeScenario, scenarioFromHash } from "./lib/scenario";
 import { computeStandings } from "./lib/standings";
-import type { FactDraft, Match, Prediction, Tournament } from "./types";
+import type { BaselinePrediction, FactDraft, Match, Prediction, Tournament } from "./types";
 import "./styles.css";
 
 type Tab = "groups" | "knockout" | "predictions";
@@ -43,6 +44,8 @@ function App() {
   const [facts, setFacts] = useState<Record<number, FactDraft>>({});
   const [activeTab, setActiveTab] = useState<Tab>(() => tabFromSearch(window.location.search) ?? "groups");
   const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [baseline, setBaseline] = useState<BaselinePrediction | null>(null);
+  const [baselineError, setBaselineError] = useState<string | null>(null);
   const [simulations, setSimulations] = useState(20000);
   const [simulatorSurprise, setSimulatorSurprise] = useState(35);
   const [loading, setLoading] = useState(false);
@@ -66,6 +69,34 @@ function App() {
       })
       .then(setTournament)
       .catch((err: Error) => setError(err.message));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadBaseline() {
+      try {
+        const response = await fetch("/api/baseline", { headers: { Accept: "application/json" } });
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!response.ok || !contentType.includes("application/json")) {
+          throw new Error("Butterfly Effect baseline is unavailable. Restart the FastAPI server to enable /api/baseline.");
+        }
+        const payload = (await response.json()) as BaselinePrediction;
+        if (active) {
+          setBaseline(payload);
+          setBaselineError(null);
+        }
+      } catch (err) {
+        if (active) {
+          setBaselineError(err instanceof Error ? err.message : "Butterfly Effect baseline is unavailable.");
+        }
+      }
+    }
+
+    loadBaseline();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const groupMatches = useMemo(() => {
@@ -282,7 +313,9 @@ function App() {
           />
         )}
 
-        {activeTab === "predictions" && <PredictionsView prediction={prediction} />}
+        {activeTab === "predictions" && (
+          <PredictionsView prediction={prediction} baseline={baseline} baselineError={baselineError} />
+        )}
       </section>
     </main>
   );
@@ -714,7 +747,15 @@ function TeamScoreRow({
   );
 }
 
-function PredictionsView({ prediction }: { prediction: Prediction | null }) {
+function PredictionsView({
+  prediction,
+  baseline,
+  baselineError
+}: {
+  prediction: Prediction | null;
+  baseline: BaselinePrediction | null;
+  baselineError: string | null;
+}) {
   if (!prediction) {
     return (
       <section className="empty-state">
@@ -723,6 +764,13 @@ function PredictionsView({ prediction }: { prediction: Prediction | null }) {
       </section>
     );
   }
+
+  const effect =
+    baseline && baseline.data_version === prediction.data_version ? buildButterflyEffect(prediction, baseline) : null;
+  const baselineNote =
+    baseline && baseline.data_version !== prediction.data_version
+      ? "Butterfly Effect is hidden because the baseline snapshot is from a different data version."
+      : baselineError;
 
   return (
     <section className="predictions-layout">
@@ -751,6 +799,12 @@ function PredictionsView({ prediction }: { prediction: Prediction | null }) {
           ))}
         </div>
       </article>
+
+      {effect ? (
+        <ButterflyEffectPanel effect={effect} prediction={prediction} />
+      ) : (
+        baselineNote && <p className="butterfly-note">{baselineNote}</p>
+      )}
 
       <article className="wide-panel">
         <h2>Round-by-Round</h2>
@@ -804,6 +858,281 @@ function PredictionsView({ prediction }: { prediction: Prediction | null }) {
       </article>
     </section>
   );
+}
+
+function ButterflyEffectPanel({ effect, prediction }: { effect: ButterflyEffect; prediction: Prediction }) {
+  const [imageStatus, setImageStatus] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleShareImage() {
+    setExporting(true);
+    setImageStatus(null);
+    try {
+      const copied = await downloadButterflyShareCard(effect, prediction);
+      setImageStatus(copied ? "PNG copied and downloaded." : "PNG downloaded.");
+    } catch (err) {
+      setImageStatus(err instanceof Error ? err.message : "Could not create the share image.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <article className="wide-panel butterfly-panel">
+      <header className="butterfly-hero">
+        <div>
+          <p className="panel-kicker">Butterfly Effect</p>
+          <h2>{effect.headline}</h2>
+          <p>{effect.narrative}</p>
+        </div>
+        <div className="effect-score" aria-label={`Chaos score ${effect.chaosScore} out of 100`}>
+          <span>Chaos Score</span>
+          <strong>{effect.chaosScore}</strong>
+          <small>/100</small>
+        </div>
+        <div className="share-image-actions">
+          <button className="simulate-button share-image-button" type="button" onClick={handleShareImage} disabled={exporting}>
+            {exporting ? "Creating..." : "Share Image"}
+          </button>
+          {imageStatus && <span className="status-note">{imageStatus}</span>}
+        </div>
+      </header>
+
+      <div className="effect-grid">
+        <EffectSummaryCard
+          label="Biggest lift"
+          team={effect.biggestWinner?.team}
+          value={effect.biggestWinner ? formatSignedPercentPoints(effect.biggestWinner.delta) : "Even"}
+          tone="positive"
+        />
+        <EffectSummaryCard
+          label="Biggest heartbreak"
+          team={effect.biggestLoser?.team}
+          value={effect.biggestLoser ? formatSignedPercentPoints(effect.biggestLoser.delta) : "None"}
+          tone="negative"
+        />
+        <EffectSummaryCard
+          label="Favorite now"
+          team={effect.championFavorite?.team}
+          value={effect.championFavorite ? formatPercent(effect.championFavorite.probability) : "Open"}
+        />
+        <EffectSummaryCard label="Pressure point" team={effect.pressurePoint} value="Path shift" />
+      </div>
+
+      <div className="delta-layout">
+        <DeltaList title="Winners" rows={effect.winners} tone="positive" />
+        <DeltaList title="Heartbreaks" rows={effect.losers} tone="negative" />
+        <div className="delta-list round-delta-list">
+          <h3>Path Movers</h3>
+          {effect.roundMovers.length > 0 ? (
+            effect.roundMovers.map((row) => (
+              <div className="delta-row" key={row.team}>
+                <TeamName team={row.team} compact />
+                <span>{roundLabel(row.strongestRound)}</span>
+                <strong className={row.strongestDelta >= 0 ? "positive" : "negative"}>
+                  {formatSignedPercentPoints(row.strongestDelta)}
+                </strong>
+              </div>
+            ))
+          ) : (
+            <p className="muted-text">No clear path swing yet.</p>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EffectSummaryCard({
+  label,
+  team,
+  value,
+  tone
+}: {
+  label: string;
+  team?: string;
+  value: string;
+  tone?: "positive" | "negative";
+}) {
+  return (
+    <div className="effect-card">
+      <span>{label}</span>
+      <strong>{team && !team.startsWith("Group ") ? <TeamName team={team} compact /> : (team ?? "No swing")}</strong>
+      <em className={tone}>{value}</em>
+    </div>
+  );
+}
+
+function DeltaList({ title, rows, tone }: { title: string; rows: Array<{ team: string; delta: number }>; tone: "positive" | "negative" }) {
+  return (
+    <div className="delta-list">
+      <h3>{title}</h3>
+      {rows.length > 0 ? (
+        rows.map((row) => (
+          <div className="delta-row" key={row.team}>
+            <TeamName team={row.team} compact />
+            <strong className={tone}>{formatSignedPercentPoints(row.delta)}</strong>
+          </div>
+        ))
+      ) : (
+        <p className="muted-text">No major movement.</p>
+      )}
+    </div>
+  );
+}
+
+async function downloadButterflyShareCard(effect: ButterflyEffect, prediction: Prediction) {
+  const svg = buildButterflyShareSvg(effect, prediction);
+  const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  const image = await loadImage(svgUrl);
+  URL.revokeObjectURL(svgUrl);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 630;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas is not available.");
+  }
+  context.drawImage(image, 0, 0);
+
+  const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!pngBlob) {
+    throw new Error("Could not create PNG.");
+  }
+
+  const copied = await copyPngToClipboard(pngBlob);
+  const pngUrl = URL.createObjectURL(pngBlob);
+  const link = document.createElement("a");
+  link.href = pngUrl;
+  link.download = "world-cup-2026-butterfly-effect.png";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+  return copied;
+}
+
+function buildButterflyShareSvg(effect: ButterflyEffect, prediction: Prediction) {
+  const winner = effect.biggestWinner
+    ? `${effect.biggestWinner.team} ${formatSignedPercentPoints(effect.biggestWinner.delta)}`
+    : "No clear boost";
+  const heartbreak = effect.biggestLoser
+    ? `${effect.biggestLoser.team} ${formatSignedPercentPoints(effect.biggestLoser.delta)}`
+    : "No major heartbreak";
+  const favorite = effect.championFavorite
+    ? `${effect.championFavorite.team} ${formatPercent(effect.championFavorite.probability)}`
+    : "Wide open";
+  const headline = svgTextBlock(effect.headline, 72, 154, 48, 58, 34);
+  const narrative = svgTextBlock(effect.narrative, 72, 520, 24, 34, 78, 2);
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0b1f17"/>
+  <rect x="36" y="36" width="1128" height="558" rx="28" fill="#123724" stroke="#d8ebe1" stroke-opacity="0.18"/>
+  <rect x="72" y="72" width="238" height="58" rx="16" fill="#dcefe4" fill-opacity="0.12"/>
+  <text x="96" y="109" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">WORLD CUP 2026</text>
+  <text x="72" y="246" fill="#d8ebe1" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800">Butterfly Effect Scenario</text>
+  ${headline}
+  <g transform="translate(810 92)">
+    <rect width="280" height="220" rx="24" fill="#8e7cf6"/>
+    <text x="34" y="58" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">CHAOS SCORE</text>
+    <text x="34" y="158" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="96" font-weight="900">${effect.chaosScore}</text>
+    <text x="174" y="158" fill="#ffffff" fill-opacity="0.78" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="34" font-weight="900">/100</text>
+  </g>
+  ${shareMetric(72, 330, "Biggest lift", winner, "#dcefe4")}
+  ${shareMetric(410, 330, "Biggest heartbreak", heartbreak, "#f0c9d8")}
+  ${shareMetric(748, 330, "Favorite now", favorite, "#d8ebe1")}
+  ${narrative}
+  <text x="72" y="574" fill="#d8ebe1" fill-opacity="0.82" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">Generated from ${prediction.settings.simulations.toLocaleString()} simulations</text>
+</svg>`.trim();
+}
+
+function shareMetric(x: number, y: number, label: string, value: string, color: string) {
+  const valueLines = splitSvgLines(value, 24)
+    .slice(0, 2)
+    .map(
+      (line, index) =>
+        `<text x="24" y="${74 + index * 28}" fill="${color}" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">${escapeSvg(line)}</text>`
+    )
+    .join("");
+  return `
+  <g transform="translate(${x} ${y})">
+    <rect width="300" height="118" rx="18" fill="#0c281d" stroke="#d8ebe1" stroke-opacity="0.16"/>
+    <text x="24" y="40" fill="#d8ebe1" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="20" font-weight="900">${escapeSvg(label)}</text>
+    ${valueLines}
+  </g>`;
+}
+
+function svgTextBlock(text: string, x: number, y: number, size: number, lineHeight: number, maxChars: number, maxLines = 3) {
+  return splitSvgLines(text, maxChars)
+    .slice(0, maxLines)
+    .map(
+      (line, index) =>
+        `<text x="${x}" y="${y + index * lineHeight}" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="900">${escapeSvg(line)}</text>`
+    )
+    .join("");
+}
+
+function splitSvgLines(text: string, maxChars: number) {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(" ")) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function escapeSvg(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not render the share image."));
+    image.src = src;
+  });
+}
+
+async function copyPngToClipboard(blob: Blob) {
+  const ClipboardItemClass = window.ClipboardItem;
+  if (!ClipboardItemClass || !navigator.clipboard?.write) {
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.write([new ClipboardItemClass({ "image/png": blob })]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function roundLabel(round: string) {
+  const labels: Record<string, string> = {
+    round_of_32: "R32",
+    round_of_16: "R16",
+    quarter_final: "QF",
+    semi_final: "SF",
+    final: "Final",
+    champion: "Champion"
+  };
+  return labels[round] ?? round;
 }
 
 function ViewIntro({ title, detail, actions }: { title: string; detail: string; actions?: React.ReactNode }) {
