@@ -55,6 +55,30 @@ describe("buildKnockoutDisplayTeams", () => {
     expect(layout[74].slot).toBe(3);
     expect(layout[89]).toMatchObject({ column: 2, slot: 2, childMatchIds: [73, 74] });
   });
+
+  it("places the bracket in classic left and right branches around the final", () => {
+    const matches = [
+      knockoutMatch(73, "Round of 32", "A", "B"),
+      knockoutMatch(74, "Round of 32", "C", "D"),
+      knockoutMatch(89, "Round of 16", "W73", "W74"),
+      knockoutMatch(97, "Quarter-final", "W89", "Left QF Path"),
+      knockoutMatch(102, "Semi-final", "W97", "Left SF Path"),
+      knockoutMatch(81, "Round of 32", "E", "F"),
+      knockoutMatch(82, "Round of 32", "G", "H"),
+      knockoutMatch(93, "Round of 16", "W81", "W82"),
+      knockoutMatch(101, "Quarter-final", "W93", "Right QF Path"),
+      knockoutMatch(103, "Semi-final", "W101", "Right SF Path"),
+      knockoutMatch(104, "Final", "W102", "W103")
+    ];
+
+    const layout = bracketLayout(matches);
+
+    expect(layout[73]).toMatchObject({ column: 1, side: "left" });
+    expect(layout[102]).toMatchObject({ column: 4, side: "left" });
+    expect(layout[104]).toMatchObject({ column: 5, side: "center" });
+    expect(layout[103]).toMatchObject({ column: 6, side: "right" });
+    expect(layout[81]).toMatchObject({ column: 9, side: "right" });
+  });
 });
 
 function groupMatches(group: string, teams: string[], startId: number): Match[] {

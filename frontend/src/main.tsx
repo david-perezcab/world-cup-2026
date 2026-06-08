@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { buildButterflyEffect, formatSignedPercentPoints, type ButterflyEffect } from "./lib/butterfly";
 import { bracketLayout, buildKnockoutDisplayTeams, type BracketPosition, type DisplayTeams } from "./lib/bracket";
-import { flagLabelFor, flagUrlFor, isPlaceholderTeam, teamCodeFor } from "./lib/flags";
+import { displayTeamNameFor, flagLabelFor, flagUrlFor, isPlaceholderTeam, teamCodeFor } from "./lib/flags";
 import { completeFacts, encodeScenario, scenarioFromHash } from "./lib/scenario";
 import { computeStandings } from "./lib/standings";
 import type { BaselinePrediction, FactDraft, Match, Prediction, Tournament } from "./types";
@@ -19,25 +19,35 @@ type SimulatorProfile = {
 };
 
 const NAV_ITEMS: Array<{ tab: Tab; label: string }> = [
-  { tab: "groups", label: "Groups" },
-  { tab: "knockout", label: "Knockout" },
-  { tab: "predictions", label: "Predictions" }
+  { tab: "groups", label: "Grupos" },
+  { tab: "knockout", label: "Eliminatorias" },
+  { tab: "predictions", label: "Predicciones" }
 ];
 
-const BRACKET_ROUNDS = ["Round of 32", "Round of 16", "Quarter-final", "Semi-final", "Final"];
-const WORLD_CUP_26_LOGO = "https://www.edigitalagency.com.au/wp-content/uploads/new-FIFA-World-Cup-2026-logo-white-PNG-large-size.png";
-const BRACKET_CARD_WIDTH = 156;
-const BRACKET_COLUMN_GAP = 60;
-const BRACKET_ROW_HEIGHT = 90;
-const BRACKET_PENALTY_ROW_HEIGHT = 90;
-const BRACKET_ROWS = 33;
-const BRACKET_CARD_ROW_SPAN = 2;
-const BRACKET_WIDTH = BRACKET_ROUNDS.length * BRACKET_CARD_WIDTH + (BRACKET_ROUNDS.length - 1) * BRACKET_COLUMN_GAP;
-const BRACKET_HEADER_STYLE: React.CSSProperties = {
-  gridTemplateColumns: `repeat(${BRACKET_ROUNDS.length}, ${BRACKET_CARD_WIDTH}px)`,
-  columnGap: BRACKET_COLUMN_GAP,
-  minWidth: BRACKET_WIDTH
+const TAB_TITLES: Record<Tab, string> = {
+  groups: "Fase de grupos",
+  knockout: "",
+  predictions: "Panel de predicciones"
 };
+
+const BRACKET_ROUNDS = [
+  "Round of 32",
+  "Round of 16",
+  "Quarter-final",
+  "Semi-final",
+  "Final",
+  "Semi-final",
+  "Quarter-final",
+  "Round of 16",
+  "Round of 32"
+];
+const WORLD_CUP_26_LOGO = "/weare26.png";
+const BRACKET_DEFAULT_CARD_WIDTH = 105;
+const BRACKET_COLUMN_GAP = 5;
+const BRACKET_ROW_HEIGHT = 35;
+const BRACKET_ROWS = 17;
+const BRACKET_CARD_ROW_SPAN = 2;
+const BRACKET_MIN_CARD_WIDTH = 58;
 
 function App() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -63,7 +73,7 @@ function App() {
     fetch("/api/tournament")
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Could not load tournament data.");
+          throw new Error("No se pudieron cargar los datos del torneo.");
         }
         return response.json();
       })
@@ -79,7 +89,7 @@ function App() {
         const response = await fetch("/api/baseline", { headers: { Accept: "application/json" } });
         const contentType = response.headers.get("content-type") ?? "";
         if (!response.ok || !contentType.includes("application/json")) {
-          throw new Error("Butterfly Effect baseline is unavailable. Restart the FastAPI server to enable /api/baseline.");
+          throw new Error("La base del Efecto Mariposa no está disponible. Reinicia FastAPI para activar /api/baseline.");
         }
         const payload = (await response.json()) as BaselinePrediction;
         if (active) {
@@ -88,7 +98,7 @@ function App() {
         }
       } catch (err) {
         if (active) {
-          setBaselineError(err instanceof Error ? err.message : "Butterfly Effect baseline is unavailable.");
+          setBaselineError(err instanceof Error ? err.message : "La base del Efecto Mariposa no está disponible.");
         }
       }
     }
@@ -139,8 +149,20 @@ function App() {
 
   function updateKnockoutWinner(match: Match, winner: "home" | "away") {
     setFacts((current) => {
-      const existing = current[match.match_id] ?? { match_id: match.match_id, source: "manual" as const };
-      return { ...current, [match.match_id]: { ...existing, knockout_winner: winner } };
+      const existing = current[match.match_id];
+      const next = { ...current };
+      if (knockoutWinnerSide(existing) === winner) {
+        delete next[match.match_id];
+        return next;
+      }
+      next[match.match_id] = {
+        match_id: match.match_id,
+        home_score: winner === "home" ? 1 : 0,
+        away_score: winner === "away" ? 1 : 0,
+        knockout_winner: winner,
+        source: "manual"
+      };
+      return next;
     });
   }
 
@@ -196,14 +218,14 @@ function App() {
   }
 
   function validateFacts(): string | null {
-    if (!tournament) return "Tournament data is not loaded.";
+    if (!tournament) return "Los datos del torneo no están cargados.";
     for (const match of tournament.matches) {
       const fact = facts[match.match_id];
       if (!fact) continue;
       const hasHome = fact.home_score !== undefined;
       const hasAway = fact.away_score !== undefined;
       if (hasHome !== hasAway) {
-        return `Match ${match.match_id} has an incomplete score.`;
+        return `El partido ${match.match_id} tiene un marcador incompleto.`;
       }
       if (
         match.is_knockout &&
@@ -212,7 +234,7 @@ function App() {
         fact.home_score === fact.away_score &&
         !fact.knockout_winner
       ) {
-        return `Match ${match.match_id} is tied and needs an advancing side.`;
+        return `El partido ${match.match_id} está empatado y necesita una selección clasificada.`;
       }
     }
     return null;
@@ -237,13 +259,13 @@ function App() {
       });
       if (!response.ok) {
         const detail = await response.json();
-        throw new Error(detail.detail ?? "Prediction failed.");
+        throw new Error(detail.detail ?? "No se pudo generar la predicción.");
       }
       const payload = (await response.json()) as Prediction;
       setPrediction(payload);
       setActiveTab("predictions");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Prediction failed.");
+      setError(err instanceof Error ? err.message : "No se pudo generar la predicción.");
     } finally {
       setLoading(false);
     }
@@ -252,13 +274,14 @@ function App() {
   if (!tournament) {
     return (
       <main className="loading-shell">
-        <section className="loading-panel">{error ?? "Loading tournament data..."}</section>
+        <section className="loading-panel">{error ?? "Cargando datos del torneo..."}</section>
       </main>
     );
   }
 
   const knockoutMatches = tournament.matches.filter((match) => match.is_knockout);
   const factCount = completeFacts(facts).length;
+  const activeTitle = TAB_TITLES[activeTab];
 
   return (
     <main className="app-frame">
@@ -275,13 +298,15 @@ function App() {
         shareStatus={shareStatus}
       />
 
-      <section className="content-shell">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">FIFA World Cup 2026</p>
-            <h1>Prediction Lab</h1>
-          </div>
-        </header>
+      <section className={`content-shell ${activeTab === "knockout" ? "knockout-content" : ""}`}>
+        {activeTab !== "knockout" && (
+          <header className="topbar">
+            <div>
+              <p className="eyebrow">Mundial FIFA 2026</p>
+              {activeTitle && <h1>{activeTitle}</h1>}
+            </div>
+          </header>
+        )}
 
         {error && <section className="error-panel">{error}</section>}
 
@@ -306,10 +331,7 @@ function App() {
             displayTeams={knockoutDisplayTeams}
             layout={knockoutLayout}
             facts={facts}
-            updateScore={updateScore}
             updateKnockoutWinner={updateKnockoutWinner}
-            resetMatch={resetMatch}
-            simulateMatch={simulateMatch}
           />
         )}
 
@@ -348,15 +370,11 @@ function Sidebar({
     <aside className="side-menu">
       <div className="side-header">
         <div className="brand-mark">
-          <img src={WORLD_CUP_26_LOGO} alt="FIFA World Cup 26 logo" />
-        </div>
-        <div className="side-title">
-          <strong>World Cup</strong>
-          <span>Scenario Lab</span>
+          <img src={WORLD_CUP_26_LOGO} alt="Logo del Mundial FIFA 26" />
         </div>
       </div>
 
-      <nav className="side-nav" aria-label="Prediction views">
+      <nav className="side-nav" aria-label="Vistas de predicción">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.tab}
@@ -368,15 +386,9 @@ function Sidebar({
         ))}
       </nav>
 
-      <div className="side-card scenario-card">
-        <span className="card-label">Scenario</span>
-        <strong>{factCount}</strong>
-        <span>result{factCount === 1 ? "" : "s"} locked</span>
-      </div>
-
       <div className="side-card controls-card">
         <label>
-          Simulations
+          Simulaciones
           <input
             type="number"
             min={100}
@@ -387,13 +399,13 @@ function Sidebar({
           />
         </label>
         <button className="primary" onClick={runPrediction} disabled={loading}>
-          {loading ? "Running..." : "Generate"}
+          {loading ? "Calculando..." : "Calcular"}
         </button>
       </div>
 
       <div className="side-actions">
-        <button onClick={copyShareLink}>Copy Share Link</button>
-        <button onClick={clearScenario}>Clear Edits</button>
+        <button onClick={copyShareLink}>Copiar enlace</button>
+        <button onClick={clearScenario}>Borrar cambios</button>
         {shareStatus && <span className="status-note">{shareStatus}</span>}
       </div>
     </aside>
@@ -425,30 +437,24 @@ function GroupsView({
 }) {
   return (
     <section className="view-stack">
-      <ViewIntro
-        title="Group Stage"
-        detail="Enter confirmed scores and watch the live table recalculate instantly."
-        actions={
-          <>
-            <label className="surprise-slider">
-              <span>Favorites</span>
-              <input
-                aria-label="Match simulator surprise level"
-                type="range"
-                min={0}
-                max={100}
-                value={simulatorSurprise}
-                onChange={(event) => setSimulatorSurprise(Number(event.target.value))}
-              />
-              <span>Surprises</span>
-            </label>
-            <button className="simulate-button intro-action" type="button" onClick={simulateAllGroups}>
-              <span aria-hidden="true">{"\u{1F3B2}"}</span>
-              All Groups
-            </button>
-          </>
-        }
-      />
+      <section className="scenario-toolbar" aria-label="Controles de simulación de grupos">
+        <label className="surprise-slider">
+          <span>Favoritos</span>
+          <input
+            aria-label="Nivel de sorpresa del simulador de partidos"
+            type="range"
+            min={0}
+            max={100}
+            value={simulatorSurprise}
+            onChange={(event) => setSimulatorSurprise(Number(event.target.value))}
+          />
+          <span>Sorpresas</span>
+        </label>
+        <button className="simulate-button intro-action" type="button" onClick={simulateAllGroups}>
+          <span aria-hidden="true">{"\u{1F3B2}"}</span>
+          Todos los grupos
+        </button>
+      </section>
       <div className="groups-grid">
         {Object.entries(groups).map(([group, teams]) => {
           const matches = groupMatches[group] ?? [];
@@ -457,14 +463,16 @@ function GroupsView({
             <article className="group-panel" key={group}>
               <header className="panel-header">
                 <div>
-                  <p className="panel-kicker">Group</p>
+                  <p className="panel-kicker">Grupo</p>
                   <h2>{group}</h2>
                 </div>
                 <div className="panel-actions">
-                  <span>{matches.length} matches</span>
+                  <span>
+                    {matches.length} partido{matches.length === 1 ? "" : "s"}
+                  </span>
                   <button className="simulate-button group-sim-button" type="button" onClick={() => simulateGroup(matches)}>
                     <span aria-hidden="true">{"\u{1F3B2}"}</span>
-                    Group
+                    Grupo
                   </button>
                 </div>
               </header>
@@ -494,42 +502,39 @@ function KnockoutView({
   displayTeams,
   layout,
   facts,
-  updateScore,
-  updateKnockoutWinner,
-  resetMatch,
-  simulateMatch
+  updateKnockoutWinner
 }: {
   matches: Match[];
   displayTeams: Record<number, DisplayTeams>;
   layout: Record<number, BracketPosition>;
   facts: Record<number, FactDraft>;
-  updateScore: (match: Match, side: "home_score" | "away_score", value: string) => void;
   updateKnockoutWinner: (match: Match, winner: "home" | "away") => void;
-  resetMatch: (matchId: number) => void;
-  simulateMatch: (match: Match, displayTeams?: DisplayTeams) => void;
 }) {
   const rounds = groupBy(matches, (match) => match.round);
   const thirdPlaceMatches = rounds["Match for third place"] ?? [];
+  const thirdPlaceMatch = thirdPlaceMatches[0];
   const bracketMatches = matches.filter((match) => match.round !== "Match for third place");
-  const rowHeight = hasRoundOf32Penalties(bracketMatches, facts) ? BRACKET_PENALTY_ROW_HEIGHT : BRACKET_ROW_HEIGHT;
+  const [shellElement, bracketMetrics] = useBracketMetrics();
+  const { cardWidth, rowHeight } = bracketMetrics;
+  const bracketWidth = BRACKET_ROUNDS.length * cardWidth + (BRACKET_ROUNDS.length - 1) * BRACKET_COLUMN_GAP;
   const bracketHeight = BRACKET_ROWS * rowHeight;
-  const connectors = buildBracketConnectors(layout, rowHeight);
+  const connectors = buildBracketConnectors(layout, rowHeight, cardWidth);
+  const headerStyle = bracketGridStyle(cardWidth, bracketWidth);
 
   return (
     <section className="view-stack">
-      <ViewIntro title="Knockout Bracket" detail="Fill tied factual knockouts with the side that advanced." />
-      <div className="bracket-shell">
-        <div className="bracket-headers" style={BRACKET_HEADER_STYLE}>
-          {BRACKET_ROUNDS.map((round) => (
-            <h2 key={round}>{round}</h2>
+      <div className="bracket-shell" ref={shellElement}>
+        <div className="bracket-headers" style={headerStyle}>
+          {BRACKET_ROUNDS.map((round, index) => (
+            <h2 key={`${round}-${index}`}>{roundTitleFor(round)}</h2>
           ))}
         </div>
-        <div className="bracket-board" style={bracketBoardStyle(rowHeight, bracketHeight)}>
+        <div className="bracket-board" style={bracketBoardStyle(cardWidth, rowHeight, bracketWidth, bracketHeight)}>
           <svg
             className="bracket-lines"
-            width={BRACKET_WIDTH}
+            width={bracketWidth}
             height={bracketHeight}
-            viewBox={`0 0 ${BRACKET_WIDTH} ${bracketHeight}`}
+            viewBox={`0 0 ${bracketWidth} ${bracketHeight}`}
             aria-hidden="true"
           >
             {connectors.map((path, index) => (
@@ -537,49 +542,55 @@ function KnockoutView({
             ))}
           </svg>
           {bracketMatches.map((match) => {
-            const position = layout[match.match_id] ?? { round: match.round, column: 1, slot: 1, childMatchIds: [] };
+            const position = layout[match.match_id] ?? {
+              round: match.round,
+              column: 1,
+              slot: 1,
+              childMatchIds: [],
+              side: "left" as const
+            };
             return (
               <div
                 className={`bracket-card ${match.round === "Final" ? "final-card" : ""}`}
                 key={match.match_id}
                 style={{ gridColumn: position.column, gridRow: `${position.slot} / span ${BRACKET_CARD_ROW_SPAN}` }}
               >
-                <KnockoutMatchCard
-                  match={match}
-                  displayTeams={displayTeams[match.match_id]}
-                  fact={facts[match.match_id]}
-                  updateScore={updateScore}
-                  updateKnockoutWinner={updateKnockoutWinner}
-                  resetMatch={resetMatch}
-                  simulateMatch={simulateMatch}
-                />
+                {match.round === "Final" ? (
+                  <div className="final-stack">
+                    <div className="final-block">
+                      <h3>FINAL</h3>
+                      <KnockoutMatchCard
+                        match={match}
+                        displayTeams={displayTeams[match.match_id]}
+                        fact={facts[match.match_id]}
+                        updateKnockoutWinner={updateKnockoutWinner}
+                      />
+                    </div>
+                    {thirdPlaceMatch && (
+                      <div className="final-block third-place-block">
+                        <h3>3º PUESTO</h3>
+                        <KnockoutMatchCard
+                          match={thirdPlaceMatch}
+                          displayTeams={displayTeams[thirdPlaceMatch.match_id]}
+                          fact={facts[thirdPlaceMatch.match_id]}
+                          updateKnockoutWinner={updateKnockoutWinner}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <KnockoutMatchCard
+                    match={match}
+                    displayTeams={displayTeams[match.match_id]}
+                    fact={facts[match.match_id]}
+                    updateKnockoutWinner={updateKnockoutWinner}
+                  />
+                )}
               </div>
             );
           })}
         </div>
       </div>
-
-      {thirdPlaceMatches.length > 0 && (
-        <article className="third-place-panel">
-          <header className="panel-header">
-            <h2>Third Place</h2>
-          </header>
-          <div className="fixture-list single-column">
-            {thirdPlaceMatches.map((match) => (
-              <KnockoutMatchCard
-                key={match.match_id}
-                match={match}
-                displayTeams={displayTeams[match.match_id]}
-                fact={facts[match.match_id]}
-                updateScore={updateScore}
-                updateKnockoutWinner={updateKnockoutWinner}
-                resetMatch={resetMatch}
-                simulateMatch={simulateMatch}
-              />
-            ))}
-          </div>
-        </article>
-      )}
     </section>
   );
 }
@@ -588,161 +599,125 @@ function KnockoutMatchCard({
   match,
   displayTeams,
   fact,
-  updateScore,
-  updateKnockoutWinner,
-  resetMatch,
-  simulateMatch
+  updateKnockoutWinner
 }: {
   match: Match;
   displayTeams?: DisplayTeams;
   fact?: FactDraft;
-  updateScore: (match: Match, side: "home_score" | "away_score", value: string) => void;
   updateKnockoutWinner: (match: Match, winner: "home" | "away") => void;
-  resetMatch: (matchId: number) => void;
-  simulateMatch: (match: Match, displayTeams?: DisplayTeams) => void;
 }) {
-  const tied =
-    fact?.home_score !== undefined &&
-    fact.away_score !== undefined &&
-    fact.home_score === fact.away_score;
+  const homeTeam = displayTeams?.homeTeam ?? match.home_team;
+  const awayTeam = displayTeams?.awayTeam ?? match.away_team;
+  const selectedWinner = knockoutWinnerSide(fact);
 
   return (
-    <div className={`knockout-match ${tied ? "needs-advancer" : ""}`}>
-      <MatchEditor
-        match={match}
-        displayTeams={displayTeams}
-        fact={fact}
-        updateScore={updateScore}
-        resetMatch={resetMatch}
-        simulateMatch={simulateMatch}
-        compact
-      />
-      {tied && (
-        <label className="winner-select">
-          <span>Adv.</span>
-          <select
-            value={fact.knockout_winner ?? ""}
-            onChange={(event) => updateKnockoutWinner(match, event.target.value as "home" | "away")}
-          >
-            <option value="">Choose side</option>
-            <option value="home">{matchOptionLabel(displayTeams?.homeTeam ?? match.home_team)}</option>
-            <option value="away">{matchOptionLabel(displayTeams?.awayTeam ?? match.away_team)}</option>
-          </select>
-        </label>
-      )}
+    <div className={`knockout-match winner-pick-card ${selectedWinner ? "has-winner" : ""}`}>
+      <div className="winner-pick-stack">
+        <WinnerPickButton
+          match={match}
+          side="home"
+          team={homeTeam}
+          selectedWinner={selectedWinner}
+          updateKnockoutWinner={updateKnockoutWinner}
+        />
+        <WinnerPickButton
+          match={match}
+          side="away"
+          team={awayTeam}
+          selectedWinner={selectedWinner}
+          updateKnockoutWinner={updateKnockoutWinner}
+        />
+      </div>
     </div>
+  );
+}
+
+function WinnerPickButton({
+  match,
+  side,
+  team,
+  selectedWinner,
+  updateKnockoutWinner
+}: {
+  match: Match;
+  side: "home" | "away";
+  team: string;
+  selectedWinner: "home" | "away" | null;
+  updateKnockoutWinner: (match: Match, winner: "home" | "away") => void;
+}) {
+  const selected = selectedWinner === side;
+  const faded = selectedWinner !== null && !selected;
+  const displayName = displayTeamNameFor(team);
+  return (
+    <button
+      className={`winner-pick-button ${selected ? "selected" : ""} ${faded ? "faded" : ""}`}
+      type="button"
+      aria-pressed={selected}
+      aria-label={selected ? `Borrar ganador ${displayName}` : `Elegir ganador ${displayName}`}
+      title={selected ? "Volver a pinchar para borrar" : "Elegir ganador"}
+      onClick={() => updateKnockoutWinner(match, side)}
+    >
+      <TeamName team={team} matchLabel />
+    </button>
   );
 }
 
 function MatchEditor({
   match,
-  displayTeams,
   fact,
   updateScore,
   resetMatch,
-  simulateMatch,
-  compact = false
+  simulateMatch
 }: {
   match: Match;
-  displayTeams?: DisplayTeams;
   fact?: FactDraft;
   updateScore: (match: Match, side: "home_score" | "away_score", value: string) => void;
   resetMatch: (matchId: number) => void;
   simulateMatch: (match: Match, displayTeams?: DisplayTeams) => void;
-  compact?: boolean;
 }) {
-  const homeTeam = displayTeams?.homeTeam ?? match.home_team;
-  const awayTeam = displayTeams?.awayTeam ?? match.away_team;
+  const homeTeam = match.home_team;
+  const awayTeam = match.away_team;
 
   return (
-    <div className={`match-editor ${compact ? "compact-match" : ""}`}>
-      <div className={`match-actions ${compact ? "compact-actions" : ""}`}>
+    <div className="match-editor">
+      <div className="match-actions">
         <button
           className="simulate-button match-sim-button"
           type="button"
-          title="Simulate match"
-          aria-label={`Simulate match ${match.match_id}`}
-          onClick={() => simulateMatch(match, displayTeams)}
+          title="Simular partido"
+          aria-label={`Simular partido ${match.match_id}`}
+          onClick={() => simulateMatch(match)}
         >
           {"\u{1F3B2}"}
         </button>
-        {compact && (
-          <button className="ghost-button compact-reset-button" title="Reset match" onClick={() => resetMatch(match.match_id)}>
-            Reset
-          </button>
-        )}
       </div>
       <div className="match-meta">
-        <span>M{match.match_id}</span>
         <span>{formatSpainKickoff(match)}</span>
       </div>
-      {compact ? (
-        <div className="score-stack">
-          <TeamScoreRow
-            team={homeTeam}
-            score={fact?.home_score}
-            ariaLabel={`${homeTeam} score`}
-            onChange={(value) => updateScore(match, "home_score", value)}
-          />
-          <TeamScoreRow
-            team={awayTeam}
-            score={fact?.away_score}
-            ariaLabel={`${awayTeam} score`}
-            onChange={(value) => updateScore(match, "away_score", value)}
-          />
-        </div>
-      ) : (
-        <div className="score-row">
-          <TeamName team={homeTeam} matchLabel />
-          <input
-            aria-label={`${homeTeam} score`}
-            type="number"
-            min={0}
-            max={30}
-            value={fact?.home_score ?? ""}
-            onChange={(event) => updateScore(match, "home_score", event.target.value)}
-          />
-          <span className="score-separator">-</span>
-          <input
-            aria-label={`${awayTeam} score`}
-            type="number"
-            min={0}
-            max={30}
-            value={fact?.away_score ?? ""}
-            onChange={(event) => updateScore(match, "away_score", event.target.value)}
-          />
-          <TeamName team={awayTeam} align="right" matchLabel />
-          <button className="ghost-button" title="Reset match" onClick={() => resetMatch(match.match_id)}>
-            Reset
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TeamScoreRow({
-  team,
-  score,
-  ariaLabel,
-  onChange
-}: {
-  team: string;
-  score?: number;
-  ariaLabel: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="team-score-row">
-      <TeamName team={team} matchLabel />
-      <input
-        aria-label={ariaLabel}
-        type="number"
-        min={0}
-        max={30}
-        value={score ?? ""}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <div className="score-row">
+        <TeamName team={homeTeam} matchLabel />
+        <input
+          aria-label={`Marcador de ${displayTeamNameFor(homeTeam)}`}
+          type="number"
+          min={0}
+          max={30}
+          value={fact?.home_score ?? ""}
+          onChange={(event) => updateScore(match, "home_score", event.target.value)}
+        />
+        <span className="score-separator">-</span>
+        <input
+          aria-label={`Marcador de ${displayTeamNameFor(awayTeam)}`}
+          type="number"
+          min={0}
+          max={30}
+          value={fact?.away_score ?? ""}
+          onChange={(event) => updateScore(match, "away_score", event.target.value)}
+        />
+        <TeamName team={awayTeam} align="right" matchLabel />
+        <button className="ghost-button clear-match-button" title="Borrar partido" aria-label="Borrar partido" onClick={() => resetMatch(match.match_id)}>
+          ×
+        </button>
+      </div>
     </div>
   );
 }
@@ -759,8 +734,8 @@ function PredictionsView({
   if (!prediction) {
     return (
       <section className="empty-state">
-        <h2>No prediction run yet</h2>
-        <p>Lock any real scores you want to treat as facts, then run the simulation from the side menu.</p>
+        <h2>Aún no hay predicción</h2>
+        <p>Fija los resultados reales que quieras tratar como hechos y genera la simulación desde el menú lateral.</p>
       </section>
     );
   }
@@ -769,25 +744,20 @@ function PredictionsView({
     baseline && baseline.data_version === prediction.data_version ? buildButterflyEffect(prediction, baseline) : null;
   const baselineNote =
     baseline && baseline.data_version !== prediction.data_version
-      ? "Butterfly Effect is hidden because the baseline snapshot is from a different data version."
+      ? "El Efecto Mariposa está oculto porque la base pertenece a otra versión de datos."
       : baselineError;
 
   return (
     <section className="predictions-layout">
-      <ViewIntro
-        title="Prediction Board"
-        detail={`${prediction.settings.simulations.toLocaleString()} simulations with a fresh draw`}
-      />
-
       <article className="wide-panel champion-panel">
         <header className="panel-header">
           <div>
-            <p className="panel-kicker">Projected winner</p>
-            <h2>Champion Probabilities</h2>
+            <p className="panel-kicker">Ganador proyectado</p>
+            <h2>Probabilidades de campeón</h2>
           </div>
         </header>
         <div className="probability-list">
-          {prediction.champion_probabilities.slice(0, 16).map((row, index) => (
+          {prediction.champion_probabilities.slice(0, 8).map((row, index) => (
             <div className="probability-row" key={row.team}>
               <span className="rank">{index + 1}</span>
               <TeamName team={row.team} />
@@ -807,18 +777,18 @@ function PredictionsView({
       )}
 
       <article className="wide-panel">
-        <h2>Round-by-Round</h2>
+        <h2>Ronda a ronda</h2>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Team</th>
+                <th>Equipo</th>
                 <th>R32</th>
                 <th>R16</th>
                 <th>QF</th>
                 <th>SF</th>
                 <th>Final</th>
-                <th>Champion</th>
+                <th>Campeón</th>
               </tr>
             </thead>
             <tbody>
@@ -841,11 +811,11 @@ function PredictionsView({
       </article>
 
       <article className="wide-panel">
-        <h2>Group Qualification</h2>
+        <h2>Clasificación de grupos</h2>
         <div className="group-prob-grid">
           {Object.entries(prediction.group_probabilities).map(([group, rows]) => (
             <div className="mini-table" key={group}>
-              <h3>Group {group}</h3>
+              <h3>Grupo {group}</h3>
               {rows.map((row) => (
                 <div className="mini-row" key={row.team}>
                   <TeamName team={row.team} compact />
@@ -869,9 +839,9 @@ function ButterflyEffectPanel({ effect, prediction }: { effect: ButterflyEffect;
     setImageStatus(null);
     try {
       const copied = await downloadButterflyShareCard(effect, prediction);
-      setImageStatus(copied ? "PNG copied and downloaded." : "PNG downloaded.");
+      setImageStatus(copied ? "PNG copiado y descargado." : "PNG descargado.");
     } catch (err) {
-      setImageStatus(err instanceof Error ? err.message : "Could not create the share image.");
+      setImageStatus(err instanceof Error ? err.message : "No se pudo crear la imagen para compartir.");
     } finally {
       setExporting(false);
     }
@@ -881,18 +851,18 @@ function ButterflyEffectPanel({ effect, prediction }: { effect: ButterflyEffect;
     <article className="wide-panel butterfly-panel">
       <header className="butterfly-hero">
         <div>
-          <p className="panel-kicker">Butterfly Effect</p>
+          <p className="panel-kicker">Efecto Mariposa</p>
           <h2>{effect.headline}</h2>
           <p>{effect.narrative}</p>
         </div>
-        <div className="effect-score" aria-label={`Chaos score ${effect.chaosScore} out of 100`}>
-          <span>Chaos Score</span>
+        <div className="effect-score" aria-label={`Índice de caos ${effect.chaosScore} de 100`}>
+          <span>Índice de caos</span>
           <strong>{effect.chaosScore}</strong>
           <small>/100</small>
         </div>
         <div className="share-image-actions">
           <button className="simulate-button share-image-button" type="button" onClick={handleShareImage} disabled={exporting}>
-            {exporting ? "Creating..." : "Share Image"}
+            {exporting ? "Creando..." : "Imagen para compartir"}
           </button>
           {imageStatus && <span className="status-note">{imageStatus}</span>}
         </div>
@@ -900,30 +870,30 @@ function ButterflyEffectPanel({ effect, prediction }: { effect: ButterflyEffect;
 
       <div className="effect-grid">
         <EffectSummaryCard
-          label="Biggest lift"
+          label="Ojito con..."
           team={effect.biggestWinner?.team}
-          value={effect.biggestWinner ? formatSignedPercentPoints(effect.biggestWinner.delta) : "Even"}
+          value={effect.biggestWinner ? formatSignedPercentPoints(effect.biggestWinner.delta) : "Sin cambio"}
           tone="positive"
         />
         <EffectSummaryCard
-          label="Biggest heartbreak"
+          label="Mayor Pechofriada"
           team={effect.biggestLoser?.team}
-          value={effect.biggestLoser ? formatSignedPercentPoints(effect.biggestLoser.delta) : "None"}
+          value={effect.biggestLoser ? formatSignedPercentPoints(effect.biggestLoser.delta) : "Ninguna"}
           tone="negative"
         />
         <EffectSummaryCard
-          label="Favorite now"
+          label="Favorito ahora"
           team={effect.championFavorite?.team}
-          value={effect.championFavorite ? formatPercent(effect.championFavorite.probability) : "Open"}
+          value={effect.championFavorite ? formatPercent(effect.championFavorite.probability) : "Abierto"}
         />
-        <EffectSummaryCard label="Pressure point" team={effect.pressurePoint} value="Path shift" />
+        <EffectSummaryCard label="Punto clave" team={effect.pressurePoint} value="Cambio de camino" />
       </div>
 
       <div className="delta-layout">
-        <DeltaList title="Winners" rows={effect.winners} tone="positive" />
-        <DeltaList title="Heartbreaks" rows={effect.losers} tone="negative" />
+        <DeltaList title="Ganadores" rows={effect.winners} tone="positive" />
+        <DeltaList title="Golpes" rows={effect.losers} tone="negative" />
         <div className="delta-list round-delta-list">
-          <h3>Path Movers</h3>
+          <h3>Movimientos de camino</h3>
           {effect.roundMovers.length > 0 ? (
             effect.roundMovers.map((row) => (
               <div className="delta-row" key={row.team}>
@@ -935,7 +905,7 @@ function ButterflyEffectPanel({ effect, prediction }: { effect: ButterflyEffect;
               </div>
             ))
           ) : (
-            <p className="muted-text">No clear path swing yet.</p>
+            <p className="muted-text">Aún no hay un cambio claro de camino.</p>
           )}
         </div>
       </div>
@@ -957,7 +927,7 @@ function EffectSummaryCard({
   return (
     <div className="effect-card">
       <span>{label}</span>
-      <strong>{team && !team.startsWith("Group ") ? <TeamName team={team} compact /> : (team ?? "No swing")}</strong>
+      <strong>{team && !team.startsWith("Grupo ") ? <TeamName team={team} compact /> : (team ?? "Sin cambio")}</strong>
       <em className={tone}>{value}</em>
     </div>
   );
@@ -975,7 +945,7 @@ function DeltaList({ title, rows, tone }: { title: string; rows: Array<{ team: s
           </div>
         ))
       ) : (
-        <p className="muted-text">No major movement.</p>
+        <p className="muted-text">Sin movimientos importantes.</p>
       )}
     </div>
   );
@@ -993,20 +963,20 @@ async function downloadButterflyShareCard(effect: ButterflyEffect, prediction: P
   canvas.height = 630;
   const context = canvas.getContext("2d");
   if (!context) {
-    throw new Error("Canvas is not available.");
+    throw new Error("El lienzo no está disponible.");
   }
   context.drawImage(image, 0, 0);
 
   const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!pngBlob) {
-    throw new Error("Could not create PNG.");
+    throw new Error("No se pudo crear el PNG.");
   }
 
   const copied = await copyPngToClipboard(pngBlob);
   const pngUrl = URL.createObjectURL(pngBlob);
   const link = document.createElement("a");
   link.href = pngUrl;
-  link.download = "world-cup-2026-butterfly-effect.png";
+  link.download = "mundial-2026-efecto-mariposa.png";
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -1016,36 +986,37 @@ async function downloadButterflyShareCard(effect: ButterflyEffect, prediction: P
 
 function buildButterflyShareSvg(effect: ButterflyEffect, prediction: Prediction) {
   const winner = effect.biggestWinner
-    ? `${effect.biggestWinner.team} ${formatSignedPercentPoints(effect.biggestWinner.delta)}`
-    : "No clear boost";
+    ? `${displayTeamNameFor(effect.biggestWinner.team)} ${formatSignedPercentPoints(effect.biggestWinner.delta)}`
+    : "Sin impulso claro";
   const heartbreak = effect.biggestLoser
-    ? `${effect.biggestLoser.team} ${formatSignedPercentPoints(effect.biggestLoser.delta)}`
-    : "No major heartbreak";
+    ? `${displayTeamNameFor(effect.biggestLoser.team)} ${formatSignedPercentPoints(effect.biggestLoser.delta)}`
+    : "Sin golpe importante";
   const favorite = effect.championFavorite
-    ? `${effect.championFavorite.team} ${formatPercent(effect.championFavorite.probability)}`
-    : "Wide open";
+    ? `${displayTeamNameFor(effect.championFavorite.team)} ${formatPercent(effect.championFavorite.probability)}`
+    : "Muy abierto";
   const headline = svgTextBlock(effect.headline, 72, 154, 48, 58, 34);
-  const narrative = svgTextBlock(effect.narrative, 72, 520, 24, 34, 78, 2);
+  const narrative = svgTextBlock(effect.narrative, 72, 492, 22, 30, 86, 2, true);
+  const scoreSuffixX = effect.chaosScore >= 100 ? 224 : effect.chaosScore >= 10 ? 174 : 118;
 
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <rect width="1200" height="630" fill="#0b1f17"/>
   <rect x="36" y="36" width="1128" height="558" rx="28" fill="#123724" stroke="#d8ebe1" stroke-opacity="0.18"/>
   <rect x="72" y="72" width="238" height="58" rx="16" fill="#dcefe4" fill-opacity="0.12"/>
-  <text x="96" y="109" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">WORLD CUP 2026</text>
-  <text x="72" y="246" fill="#d8ebe1" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800">Butterfly Effect Scenario</text>
+  <text x="96" y="109" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">MUNDIAL 2026</text>
+  <text x="72" y="246" fill="#d8ebe1" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800">Escenario Efecto Mariposa</text>
   ${headline}
   <g transform="translate(810 92)">
     <rect width="280" height="220" rx="24" fill="#8e7cf6"/>
-    <text x="34" y="58" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">CHAOS SCORE</text>
+    <text x="34" y="58" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="24" font-weight="900">ÍNDICE DE CAOS</text>
     <text x="34" y="158" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="96" font-weight="900">${effect.chaosScore}</text>
-    <text x="174" y="158" fill="#ffffff" fill-opacity="0.78" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="34" font-weight="900">/100</text>
+    <text x="${scoreSuffixX}" y="158" fill="#ffffff" fill-opacity="0.78" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="34" font-weight="900">/100</text>
   </g>
-  ${shareMetric(72, 330, "Biggest lift", winner, "#dcefe4")}
-  ${shareMetric(410, 330, "Biggest heartbreak", heartbreak, "#f0c9d8")}
-  ${shareMetric(748, 330, "Favorite now", favorite, "#d8ebe1")}
+  ${shareMetric(72, 330, "Ojito con...", winner, "#dcefe4")}
+  ${shareMetric(410, 330, "Mayor Pechofriada", heartbreak, "#f0c9d8")}
+  ${shareMetric(748, 330, "Favorito ahora", favorite, "#d8ebe1")}
   ${narrative}
-  <text x="72" y="574" fill="#d8ebe1" fill-opacity="0.82" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">Generated from ${prediction.settings.simulations.toLocaleString()} simulations</text>
+  <text x="72" y="574" fill="#d8ebe1" fill-opacity="0.82" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">Generado con ${prediction.settings.simulations.toLocaleString()} simulaciones</text>
 </svg>`.trim();
 }
 
@@ -1065,9 +1036,23 @@ function shareMetric(x: number, y: number, label: string, value: string, color: 
   </g>`;
 }
 
-function svgTextBlock(text: string, x: number, y: number, size: number, lineHeight: number, maxChars: number, maxLines = 3) {
-  return splitSvgLines(text, maxChars)
-    .slice(0, maxLines)
+function svgTextBlock(
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  lineHeight: number,
+  maxChars: number,
+  maxLines = 3,
+  truncate = false
+) {
+  const lines = splitSvgLines(text, maxChars);
+  const visibleLines = lines.slice(0, maxLines);
+  if (truncate && lines.length > maxLines && visibleLines.length > 0) {
+    const lastIndex = visibleLines.length - 1;
+    visibleLines[lastIndex] = `${visibleLines[lastIndex].replace(/[.,;:]?$/, "")}...`;
+  }
+  return visibleLines
     .map(
       (line, index) =>
         `<text x="${x}" y="${y + index * lineHeight}" fill="#ffffff" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="${size}" font-weight="900">${escapeSvg(line)}</text>`
@@ -1104,7 +1089,7 @@ function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Could not render the share image."));
+    image.onerror = () => reject(new Error("No se pudo renderizar la imagen para compartir."));
     image.src = src;
   });
 }
@@ -1130,24 +1115,9 @@ function roundLabel(round: string) {
     quarter_final: "QF",
     semi_final: "SF",
     final: "Final",
-    champion: "Champion"
+    champion: "Campeón"
   };
   return labels[round] ?? round;
-}
-
-function ViewIntro({ title, detail, actions }: { title: string; detail: string; actions?: React.ReactNode }) {
-  return (
-    <section className="view-intro">
-      <div className="view-intro-title">
-        <p className="eyebrow">Scenario control</p>
-        <h2>{title}</h2>
-      </div>
-      <div className="view-intro-actions">
-        <p>{detail}</p>
-        {actions}
-      </div>
-    </section>
-  );
 }
 
 function StandingsTable({ rows, compact = false }: { rows: Array<Record<string, string | number>>; compact?: boolean }) {
@@ -1156,12 +1126,12 @@ function StandingsTable({ rows, compact = false }: { rows: Array<Record<string, 
       <table className={compact ? "compact-table" : ""}>
         <thead>
           <tr>
-            <th>Team</th>
-            <th>P</th>
-            <th>W</th>
+            <th>Equipo</th>
+            <th>PJ</th>
+            <th>G</th>
+            <th>E</th>
             <th>D</th>
-            <th>L</th>
-            <th>GD</th>
+            <th>DG</th>
             <th>Pts</th>
           </tr>
         </thead>
@@ -1198,13 +1168,14 @@ function TeamName({
 }) {
   const flagUrl = flagUrlFor(team);
   const placeholder = isPlaceholderTeam(team);
-  const label = matchLabel && !placeholder ? teamCodeFor(team) : team;
+  const displayName = placeholder ? team : displayTeamNameFor(team);
+  const label = matchLabel && !placeholder ? teamCodeFor(team) : displayName;
   return (
     <span
       className={`team-name ${align === "right" ? "align-right" : ""} ${compact ? "compact-team" : ""} ${
         matchLabel ? "match-team" : ""
       }`}
-      title={matchLabel ? team : undefined}
+      title={matchLabel ? displayName : undefined}
     >
       {flagUrl && <img className="flag" src={flagUrl} alt={flagLabelFor(team)} loading="lazy" />}
       <span className={placeholder ? "placeholder-team" : ""}>{label}</span>
@@ -1378,36 +1349,86 @@ function clampInteger(value: number, min: number, max: number) {
   return Math.round(clamp(value, min, max));
 }
 
-function bracketBoardStyle(rowHeight: number, bracketHeight: number): React.CSSProperties {
+function useBracketMetrics() {
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const [metrics, setMetrics] = useState({ cardWidth: BRACKET_DEFAULT_CARD_WIDTH, rowHeight: BRACKET_ROW_HEIGHT });
+
+  useEffect(() => {
+    if (!element) return;
+    const target = element;
+
+    function updateMetrics() {
+      const styles = window.getComputedStyle(target);
+      const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+      const headers = target.querySelector<HTMLElement>(".bracket-headers");
+      const headerStyles = headers ? window.getComputedStyle(headers) : null;
+      const headerHeight = headers?.offsetHeight ?? 0;
+      const headerGap = headerStyles ? parseFloat(headerStyles.marginBottom) : 0;
+      const availableWidth = Math.max(0, target.clientWidth - horizontalPadding);
+      const availableHeight = Math.max(0, target.clientHeight - verticalPadding - headerHeight - headerGap);
+      const cardWidth = Math.max(
+        BRACKET_MIN_CARD_WIDTH,
+        Math.floor((availableWidth - (BRACKET_ROUNDS.length - 1) * BRACKET_COLUMN_GAP) / BRACKET_ROUNDS.length)
+      );
+      const rowHeight = Math.max(BRACKET_ROW_HEIGHT, Math.floor(availableHeight / BRACKET_ROWS));
+
+      setMetrics((current) =>
+        current.cardWidth === cardWidth && current.rowHeight === rowHeight ? current : { cardWidth, rowHeight }
+      );
+    }
+
+    updateMetrics();
+    const observer = new ResizeObserver(updateMetrics);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [element]);
+
+  return [setElement, metrics] as const;
+}
+
+function bracketGridStyle(cardWidth: number, bracketWidth: number): React.CSSProperties {
   return {
-    gridTemplateColumns: `repeat(${BRACKET_ROUNDS.length}, ${BRACKET_CARD_WIDTH}px)`,
+    gridTemplateColumns: `repeat(${BRACKET_ROUNDS.length}, ${cardWidth}px)`,
+    columnGap: BRACKET_COLUMN_GAP,
+    width: bracketWidth
+  };
+}
+
+function bracketBoardStyle(cardWidth: number, rowHeight: number, bracketWidth: number, bracketHeight: number): React.CSSProperties {
+  return {
+    gridTemplateColumns: `repeat(${BRACKET_ROUNDS.length}, ${cardWidth}px)`,
     gridTemplateRows: `repeat(${BRACKET_ROWS}, ${rowHeight}px)`,
     columnGap: BRACKET_COLUMN_GAP,
-    minWidth: BRACKET_WIDTH,
+    width: bracketWidth,
     minHeight: bracketHeight
   };
 }
 
-function hasRoundOf32Penalties(matches: Match[], facts: Record<number, FactDraft>) {
-  return matches.some((match) => {
-    const fact = facts[match.match_id];
-    return (
-      match.round === "Round of 32" &&
-      fact?.home_score !== undefined &&
-      fact.away_score !== undefined &&
-      fact.home_score === fact.away_score
-    );
-  });
+function knockoutWinnerSide(fact?: FactDraft): "home" | "away" | null {
+  if (!fact) {
+    return null;
+  }
+  if (fact.home_score !== undefined && fact.away_score !== undefined) {
+    if (fact.home_score > fact.away_score) {
+      return "home";
+    }
+    if (fact.away_score > fact.home_score) {
+      return "away";
+    }
+  }
+  return fact.knockout_winner ?? null;
 }
 
-function buildBracketConnectors(layout: Record<number, BracketPosition>, rowHeight: number) {
+function buildBracketConnectors(layout: Record<number, BracketPosition>, rowHeight: number, cardWidth: number) {
   return Object.values(layout).flatMap((position) =>
     position.childMatchIds.map((childMatchId) => {
       const child = layout[childMatchId];
       if (!child) return "";
-      const startX = bracketX(child.column, "right");
+      const childIsLeftOfParent = child.column < position.column;
+      const startX = bracketX(child.column, childIsLeftOfParent ? "right" : "left", cardWidth);
       const startY = bracketY(child.slot, rowHeight);
-      const endX = bracketX(position.column, "left");
+      const endX = bracketX(position.column, childIsLeftOfParent ? "left" : "right", cardWidth);
       const endY = bracketY(position.slot, rowHeight);
       const midX = startX + (endX - startX) / 2;
       return `M ${startX} ${startY} H ${midX} V ${endY} H ${endX}`;
@@ -1415,9 +1436,9 @@ function buildBracketConnectors(layout: Record<number, BracketPosition>, rowHeig
   ).filter(Boolean);
 }
 
-function bracketX(column: number, edge: "left" | "right") {
-  const left = (column - 1) * (BRACKET_CARD_WIDTH + BRACKET_COLUMN_GAP);
-  return edge === "left" ? left : left + BRACKET_CARD_WIDTH;
+function bracketX(column: number, edge: "left" | "right", cardWidth: number) {
+  const left = (column - 1) * (cardWidth + BRACKET_COLUMN_GAP);
+  return edge === "left" ? left : left + cardWidth;
 }
 
 function bracketY(slot: number, rowHeight: number) {
@@ -1433,6 +1454,18 @@ function formatPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function roundTitleFor(round: string) {
+  const titles: Record<string, string> = {
+    "Round of 32": "Dieciseisavos",
+    "Round of 16": "Octavos",
+    "Quarter-final": "Cuartos",
+    "Semi-final": "Semis",
+    Final: "Final",
+    "Match for third place": "Tercer puesto"
+  };
+  return titles[round] ?? round;
+}
+
 function formatSpainKickoff(match: Match) {
   if (!match.spain_time) {
     return match.time;
@@ -1444,10 +1477,6 @@ function formatSpainKickoff(match: Match) {
 function formatShortDate(value: string) {
   const [, month, day] = value.split("-");
   return `${day}/${month}`;
-}
-
-function matchOptionLabel(team: string) {
-  return isPlaceholderTeam(team) ? team : teamCodeFor(team);
 }
 
 createRoot(document.getElementById("root")!).render(

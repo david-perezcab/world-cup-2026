@@ -56,12 +56,12 @@ describe("buildButterflyEffect", () => {
     expect(effect.biggestWinner?.delta).toBeCloseTo(0.08);
     expect(effect.biggestLoser?.team).toBe("Argentina");
     expect(effect.chaosScore).toBeGreaterThan(0);
-    expect(effect.pressurePoint).toBe("Group A");
+    expect(effect.pressurePoint).toBe("Grupo A");
   });
 
-  it("formats probability point deltas", () => {
-    expect(formatSignedPercentPoints(0.024)).toBe("+2.4 pp");
-    expect(formatSignedPercentPoints(-0.031)).toBe("-3.1 pp");
+  it("formats probability deltas as percentages", () => {
+    expect(formatSignedPercentPoints(0.024)).toBe("+2.4%");
+    expect(formatSignedPercentPoints(-0.031)).toBe("-3.1%");
   });
 });
 

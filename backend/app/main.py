@@ -14,9 +14,11 @@ from .simulator import ScenarioError, baseline_prediction_payload, predict, tour
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = PROJECT_ROOT / "data"
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+WORLD_CUP_LOGO = DATA_DIR / "weare26.png"
 
-app = FastAPI(title="World Cup 2026 Predictor", version="0.1.0")
+app = FastAPI(title="Predictor Mundial 2026", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,10 +61,17 @@ def get_baseline() -> dict:
 @app.post("/api/refresh-data")
 def refresh_data() -> dict[str, str]:
     if os.getenv("ALLOW_REFRESH") != "1":
-        raise HTTPException(status_code=403, detail="Data refresh is disabled for this deployment.")
+        raise HTTPException(status_code=403, detail="La actualización de datos está desactivada en este despliegue.")
     path = refresh_fixture_snapshot()
     baseline_path = refresh_baseline_snapshot()
     return {"status": "ok", "path": str(path), "baseline_path": str(baseline_path)}
+
+
+@app.get("/weare26.png")
+def get_world_cup_logo() -> FileResponse:
+    if not WORLD_CUP_LOGO.exists():
+        raise HTTPException(status_code=404, detail="Logo no encontrado.")
+    return FileResponse(WORLD_CUP_LOGO, media_type="image/png")
 
 
 if FRONTEND_DIST.exists():
@@ -71,12 +80,12 @@ if FRONTEND_DIST.exists():
 
 @app.api_route("/api/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 def missing_api_route(full_path: str) -> dict[str, str]:
-    raise HTTPException(status_code=404, detail=f"API route not found: /api/{full_path}")
+    raise HTTPException(status_code=404, detail=f"Ruta de API no encontrada: /api/{full_path}")
 
 
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str) -> FileResponse:
     index = FRONTEND_DIST / "index.html"
     if not index.exists():
-        raise HTTPException(status_code=404, detail="Frontend build is not available. Run npm run build.")
+        raise HTTPException(status_code=404, detail="La build del frontend no está disponible. Ejecuta npm run build.")
     return FileResponse(index)

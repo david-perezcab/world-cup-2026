@@ -43,10 +43,10 @@ def tournament_payload() -> dict[str, Any]:
     teams = all_teams(matches)
     missing_ratings = [team for team in teams if team not in ratings]
     if missing_ratings:
-        raise ScenarioError(f"Missing Elo ratings for: {', '.join(missing_ratings)}")
+        raise ScenarioError(f"Faltan ratings Elo para: {', '.join(missing_ratings)}")
 
     return {
-        "name": "World Cup 2026",
+        "name": "Mundial 2026",
         "data_version": data_version(),
         "matches": [match.to_public_dict() for match in matches],
         "groups": groups,
@@ -158,12 +158,12 @@ def _normalize_facts(matches: list[Match], facts: list[FactResult]) -> dict[int,
     by_id: dict[int, FactResult] = {}
     for fact in facts:
         if fact.match_id not in match_ids:
-            raise ScenarioError(f"Unknown match_id: {fact.match_id}")
+            raise ScenarioError(f"ID de partido desconocido: {fact.match_id}")
         if fact.match_id in by_id:
-            raise ScenarioError(f"Duplicate fact for match_id: {fact.match_id}")
+            raise ScenarioError(f"Resultado duplicado para el partido: {fact.match_id}")
         match = next(match for match in matches if match.match_id == fact.match_id)
         if match.is_knockout and fact.home_score == fact.away_score and not fact.knockout_winner:
-            raise ScenarioError(f"Knockout match {fact.match_id} needs knockout_winner for a tied score.")
+            raise ScenarioError(f"El partido eliminatorio {fact.match_id} necesita ganador si acaba empatado.")
         by_id[fact.match_id] = fact
     return by_id
 
@@ -261,7 +261,7 @@ def _simulate_knockout_stage(
             losers,
         )
         if home_team is None or away_team is None:
-            raise ScenarioError(f"Could not resolve knockout match {match.match_id}")
+            raise ScenarioError(f"No se pudo resolver el partido eliminatorio {match.match_id}")
 
         fact = facts.get(match.match_id)
         if fact:
@@ -339,7 +339,7 @@ def _assign_third_place_slots(matches: list[Match], qualified_groups: list[str])
 
     assignments = search(0, set(), {})
     if assignments is None:
-        raise ScenarioError("Could not assign qualifying third-place teams to round-of-32 slots.")
+        raise ScenarioError("No se pudieron asignar los terceros clasificados a la ronda de 32.")
     return assignments
 
 
@@ -355,7 +355,7 @@ def _winner_from_fact(match: Match, fact: FactResult, home_team: str, away_team:
     if winner in {"away", "team2", "2", away_team.casefold()}:
         return away_team
     raise ScenarioError(
-        f"Knockout match {match.match_id} winner must be home, away, {home_team}, or {away_team}."
+        f"El ganador del partido eliminatorio {match.match_id} debe ser home, away, {home_team} o {away_team}."
     )
 
 

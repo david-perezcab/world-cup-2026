@@ -47,6 +47,7 @@ export type BracketPosition = {
   column: number;
   slot: number;
   childMatchIds: number[];
+  side: "left" | "right" | "center";
 };
 
 export function bracketLayout(matches: Match[]): Record<number, BracketPosition> {
@@ -56,56 +57,78 @@ export function bracketLayout(matches: Match[]): Record<number, BracketPosition>
     return {};
   }
 
-  const leafOrder: number[] = [];
-  const positions = new Map<number, number>();
+  const positions = new Map<number, { slot: number; side: "left" | "right" }>();
 
-  function walk(token: string) {
-    const matchId = winnerTokenId(token);
-    if (!matchId) {
-      return;
+  function walkBranch(rootMatchId: number, side: "left" | "right") {
+    let leafIndex = 0;
+
+    function walk(matchId: number): number {
+      const match = byId.get(matchId);
+      if (!match) {
+        return 1;
+      }
+      const children = [winnerTokenId(match.home_team), winnerTokenId(match.away_team)].filter(
+        (id): id is number => id !== null
+      );
+      let slot: number;
+      if (children.length === 0) {
+        leafIndex += 1;
+        slot = leafIndex * 2 - 1;
+      } else {
+        const childSlots = children.map(walk);
+        slot = childSlots.reduce((sum, value) => sum + value, 0) / childSlots.length;
+      }
+      positions.set(match.match_id, { slot, side });
+      return slot;
     }
-    const match = byId.get(matchId);
-    if (!match) {
-      return;
-    }
-    const children = [winnerTokenId(match.home_team), winnerTokenId(match.away_team)].filter((id): id is number => id !== null);
-    if (children.length === 0) {
-      leafOrder.push(match.match_id);
-      positions.set(match.match_id, leafOrder.length * 2 - 1);
-      return;
-    }
-    walk(match.home_team);
-    walk(match.away_team);
-    const childPositions = children.map((id) => positions.get(id)).filter((value): value is number => value !== undefined);
-    if (childPositions.length > 0) {
-      positions.set(match.match_id, childPositions.reduce((sum, value) => sum + value, 0) / childPositions.length);
-    }
+
+    walk(rootMatchId);
   }
 
-  walk("W104");
+  const finalChildIds = [winnerTokenId(final.home_team), winnerTokenId(final.away_team)].filter(
+    (id): id is number => id !== null && byId.has(id)
+  );
+  finalChildIds.forEach((matchId, index) => walkBranch(matchId, index === 0 ? "left" : "right"));
 
-  const roundIndex: Record<string, number> = {
+  const leftColumns: Record<string, number> = {
     "Round of 32": 1,
     "Round of 16": 2,
     "Quarter-final": 3,
-    "Semi-final": 4,
-    Final: 5
+    "Semi-final": 4
   };
+  const rightColumns: Record<string, number> = {
+    "Semi-final": 6,
+    "Quarter-final": 7,
+    "Round of 16": 8,
+    "Round of 32": 9
+  };
+  const finalChildSlots = finalChildIds
+    .map((matchId) => positions.get(matchId)?.slot)
+    .filter((slot): slot is number => slot !== undefined);
+  const finalSlot =
+    finalChildSlots.length > 0 ? finalChildSlots.reduce((sum, slot) => sum + slot, 0) / finalChildSlots.length : 8;
 
   return Object.fromEntries(
     matches
       .filter((match) => match.round !== "Match for third place")
-      .map((match) => [
-        match.match_id,
-        {
-          round: match.round,
-          column: roundIndex[match.round] ?? 1,
-          slot: Math.max(1, Math.round(positions.get(match.match_id) ?? 1)),
-          childMatchIds: [winnerTokenId(match.home_team), winnerTokenId(match.away_team)].filter(
-            (id): id is number => id !== null && byId.has(id)
-          )
-        }
-      ])
+      .map((match) => {
+        const branchPosition = positions.get(match.match_id);
+        const side = match.round === "Final" ? "center" : branchPosition?.side ?? "left";
+        const column =
+          match.round === "Final" ? 5 : side === "right" ? rightColumns[match.round] ?? 9 : leftColumns[match.round] ?? 1;
+        return [
+          match.match_id,
+          {
+            round: match.round,
+            column,
+            slot: Math.max(1, Math.round(match.round === "Final" ? finalSlot : branchPosition?.slot ?? 1)),
+            childMatchIds: [winnerTokenId(match.home_team), winnerTokenId(match.away_team)].filter(
+              (id): id is number => id !== null && byId.has(id)
+            ),
+            side
+          }
+        ];
+      })
   );
 }
 

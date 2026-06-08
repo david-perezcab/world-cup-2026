@@ -1,1 +1,1 @@
-"""World Cup 2026 prediction backend."""
+"""Backend de predicción del Mundial 2026."""

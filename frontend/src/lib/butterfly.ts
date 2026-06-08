@@ -1,4 +1,5 @@
 import type { BaselinePrediction, Prediction } from "../types";
+import { displayTeamNameFor } from "./flags";
 
 const ROUND_KEYS = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final", "champion"] as const;
 
@@ -64,7 +65,7 @@ export function buildButterflyEffect(prediction: Prediction, baseline: BaselineP
 
 export function formatSignedPercentPoints(value: number) {
   const sign = value >= 0 ? "+" : "";
-  return `${sign}${(value * 100).toFixed(1)} pp`;
+  return `${sign}${(value * 100).toFixed(1)}%`;
 }
 
 function buildChampionDeltas(prediction: Prediction, baseline: BaselinePrediction): ChampionDelta[] {
@@ -122,7 +123,7 @@ function strongestGroupShift(prediction: Prediction, baseline: BaselinePredictio
       strongest = { group, shift: groupShift };
     }
   }
-  return strongest.group ? `Group ${strongest.group}` : "the bracket path";
+  return strongest.group ? `Grupo ${strongest.group}` : "el camino del cuadro";
 }
 
 function calculateChaosScore(championDeltas: ChampionDelta[], roundMovers: RoundMover[]) {
@@ -136,10 +137,10 @@ function calculateChaosScore(championDeltas: ChampionDelta[], roundMovers: Round
 }
 
 function headlineForChaos(score: number) {
-  if (score >= 75) return "A tournament-shaking alternate reality";
-  if (score >= 45) return "A bracket with serious butterfly effects";
-  if (score >= 20) return "A quiet scenario with a few sharp twists";
-  return "A steady scenario with small ripples";
+  if (score >= 75) return "Una realidad alternativa que sacude el torneo";
+  if (score >= 45) return "Un cuadro con efecto mariposa serio";
+  if (score >= 20) return "Un escenario tranquilo con giros importantes";
+  return "Un escenario estable con pequeños cambios";
 }
 
 function narrativeForEffect(
@@ -149,17 +150,17 @@ function narrativeForEffect(
   chaosScore: number
 ) {
   if (!biggestWinner && !biggestLoser) {
-    return "This stays close to the baseline. The model sees your locked results as interesting, but not bracket-breaking.";
+    return "El escenario se mantiene cerca de la base. El modelo ve tus resultados fijados como interesantes, pero no rompen el cuadro.";
   }
 
   const winnerText = biggestWinner
-    ? `${biggestWinner.team} gets the biggest lift (${formatSignedPercentPoints(biggestWinner.delta)})`
-    : "No team gets a clear title boost";
+    ? `Ojito con ${displayTeamNameFor(biggestWinner.team)} (${formatSignedPercentPoints(biggestWinner.delta)})`
+    : "Ninguna selección recibe un impulso claro hacia el título";
   const loserText = biggestLoser
-    ? `${biggestLoser.team} catches the heartbreak (${formatSignedPercentPoints(biggestLoser.delta)})`
-    : "nobody takes a major hit";
-  const mood = chaosScore >= 55 ? "That is enough to redraw the tournament mood." : "It is a ripple, not a full reset.";
-  return `${winnerText}, while ${loserText}. Most of the swing starts around ${pressurePoint} and rolls into the knockout path. ${mood}`;
+    ? `${displayTeamNameFor(biggestLoser.team)} firma la mayor pechofriada (${formatSignedPercentPoints(biggestLoser.delta)})`
+    : "nadie recibe un golpe fuerte";
+  const mood = chaosScore >= 55 ? "Eso basta para cambiar el tono del torneo." : "Es una onda expansiva, no un reinicio completo.";
+  return `${winnerText}, mientras ${loserText}. La mayor parte del cambio nace en ${pressurePoint} y se arrastra al camino eliminatorio. ${mood}`;
 }
 
 function clampInteger(value: number, min: number, max: number) {

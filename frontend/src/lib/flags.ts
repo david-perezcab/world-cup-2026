@@ -102,17 +102,73 @@ const TEAM_CODES: Record<string, string> = {
   Uzbekistan: "UZB"
 };
 
+const TEAM_NAMES_ES: Record<string, string> = {
+  Algeria: "Argelia",
+  Argentina: "Argentina",
+  Australia: "Australia",
+  Austria: "Austria",
+  Belgium: "Bélgica",
+  "Bosnia & Herzegovina": "Bosnia-Herzegovina",
+  Brazil: "Brasil",
+  Canada: "Canadá",
+  "Cape Verde": "Cabo Verde",
+  Colombia: "Colombia",
+  Croatia: "Croacia",
+  "Curacao": "Curazao",
+  "Cura\u00e7ao": "Curazao",
+  "Czech Republic": "República Checa",
+  "DR Congo": "RD Congo",
+  Ecuador: "Ecuador",
+  Egypt: "Egipto",
+  England: "Inglaterra",
+  France: "Francia",
+  Germany: "Alemania",
+  Ghana: "Ghana",
+  Haiti: "Haití",
+  Iran: "Irán",
+  Iraq: "Irak",
+  "Ivory Coast": "Costa de Marfil",
+  Japan: "Japón",
+  Jordan: "Jordania",
+  Mexico: "México",
+  Morocco: "Marruecos",
+  Netherlands: "Países Bajos",
+  "New Zealand": "Nueva Zelanda",
+  Norway: "Noruega",
+  Panama: "Panamá",
+  Paraguay: "Paraguay",
+  Portugal: "Portugal",
+  Qatar: "Catar",
+  "Saudi Arabia": "Arabia Saudí",
+  Scotland: "Escocia",
+  Senegal: "Senegal",
+  "South Africa": "Sudáfrica",
+  "South Korea": "Corea del Sur",
+  Spain: "España",
+  Sweden: "Suecia",
+  Switzerland: "Suiza",
+  Tunisia: "Túnez",
+  Turkey: "Turquía",
+  USA: "Estados Unidos",
+  Uruguay: "Uruguay",
+  Uzbekistan: "Uzbekistán"
+};
+
 export function flagUrlFor(team: string): string | null {
   const code = FLAG_CODES[team];
   return code ? `https://flagcdn.com/w40/${code}.png` : null;
 }
 
 export function flagLabelFor(team: string): string {
-  return `${team} flag`;
+  return `Bandera de ${displayTeamNameFor(team)}`;
 }
 
 export function teamCodeFor(team: string): string {
   return TEAM_CODES[team] ?? team;
+}
+
+export function displayTeamNameFor(team: string): string {
+  return TEAM_NAMES_ES[team] ?? team;
 }
 
 export function isPlaceholderTeam(team: string): boolean {

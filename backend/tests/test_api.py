@@ -11,7 +11,7 @@ def test_tournament_payload_has_full_fixture_list():
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["name"] == "World Cup 2026"
+    assert payload["name"] == "Mundial 2026"
     assert len(payload["matches"]) == 104
     assert sorted(payload["groups"].keys()) == list("ABCDEFGHIJKL")
     assert payload["matches"][0]["spain_time"] == "21:00"
@@ -56,12 +56,20 @@ def test_baseline_payload_is_available_and_matches_tournament_version():
     assert 0.99 <= champion_total <= 1.01
 
 
+def test_local_world_cup_logo_is_served():
+    response = client.get("/weare26.png")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG")
+
+
 def test_unknown_api_route_returns_json_404():
     response = client.get("/api/not-real")
 
     assert response.status_code == 404
     assert response.headers["content-type"].startswith("application/json")
-    assert response.json()["detail"] == "API route not found: /api/not-real"
+    assert response.json()["detail"] == "Ruta de API no encontrada: /api/not-real"
 
 
 def test_tied_knockout_fact_requires_winner():
@@ -81,7 +89,7 @@ def test_tied_knockout_fact_requires_winner():
     )
 
     assert response.status_code == 422
-    assert "needs knockout_winner" in response.json()["detail"]
+    assert "necesita ganador" in response.json()["detail"]
 
 
 def test_predict_is_seed_deterministic():

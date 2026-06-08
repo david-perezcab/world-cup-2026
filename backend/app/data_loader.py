@@ -83,7 +83,7 @@ def _to_spain_datetime(date_value: str, time_value: str) -> datetime | None:
         minute=int(minute),
         tzinfo=source_tz,
     )
-    # The 2026 World Cup is played in June/July, when mainland Spain is CEST.
+    # El Mundial 2026 se juega en junio/julio, cuando la España peninsular está en CEST.
     return source_dt.astimezone(SPAIN_SUMMER_TIME)
 
 

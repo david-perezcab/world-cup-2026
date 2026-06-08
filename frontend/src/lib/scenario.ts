@@ -24,7 +24,7 @@ export function decodeScenario(encoded: string): Record<number, FactDraft> {
   const json = binaryToUtf8(binary);
   const payload = JSON.parse(json) as ScenarioPayload;
   if (payload.v !== 1 || !Array.isArray(payload.facts)) {
-    throw new Error("Unsupported scenario format.");
+    throw new Error("Formato de escenario no compatible.");
   }
   return Object.fromEntries(payload.facts.map((fact) => [fact.match_id, fact]));
 }

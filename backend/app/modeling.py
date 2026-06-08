@@ -68,11 +68,11 @@ def _poisson_probability(mean: float, value: int) -> float:
 
 
 MODEL_CARD = {
-    "active_model": "Elo-informed Poisson baseline",
-    "ml_status": "Backtesting/training hooks are reserved for the next data-refresh milestone.",
+    "active_model": "Base Poisson informada por Elo",
+    "ml_status": "Las pruebas históricas y el entrenamiento quedan reservados para el siguiente hito de actualización de datos.",
     "notes": [
-        "Factual user-entered results override model output.",
-        "Missing matches are simulated from team ratings.",
-        "Tied simulated knockout matches are resolved from Elo advancement probability.",
+        "Los resultados reales introducidos por el usuario sustituyen al modelo.",
+        "Los partidos pendientes se simulan a partir de los ratings de las selecciones.",
+        "Los empates simulados en eliminatorias se resuelven con probabilidad de avance basada en Elo.",
     ],
 }
