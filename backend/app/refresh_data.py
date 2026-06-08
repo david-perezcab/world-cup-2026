@@ -5,6 +5,7 @@ from urllib.request import urlopen
 
 from .data_loader import FIXTURE_PATH, load_matches
 from .simulator import write_baseline_prediction
+from .squads import refresh_squad_snapshot
 
 
 OPENFOOTBALL_2026_JSON = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
@@ -26,3 +27,4 @@ def refresh_baseline_snapshot() -> Path:
 if __name__ == "__main__":
     print(refresh_fixture_snapshot())
     print(refresh_baseline_snapshot())
+    print(refresh_squad_snapshot())

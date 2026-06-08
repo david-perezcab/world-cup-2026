@@ -1,0 +1,123 @@
+INFO:     ::1:54947 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:54947 - "GET /assets/index-BQOhkxpp.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:57986 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:54947 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:57986 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:61642 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:59464 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:52860 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:52860 - "GET /assets/index-BQOhkxpp.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:55191 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:55191 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:52860 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:64934 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:64084 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:60104 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:60104 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:62426 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:58223 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:57311 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:52040 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:52040 - "GET /assets/index-BQOhkxpp.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:52040 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:52040 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:52040 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:58975 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:63500 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     ::1:62672 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:63635 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:63635 - "GET /assets/index-BQOhkxpp.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:54571 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:54571 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:51604 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:63635 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:52308 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:63635 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:63635 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:54571 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:51604 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:52308 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:64234 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:64234 - "GET /assets/index-BQOhkxpp.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:56807 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:56807 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:64234 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:52923 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:56807 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:55860 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     ::1:61292 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:61292 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:54647 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:63115 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:51419 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:62528 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:62528 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:57312 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:51654 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:53591 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:61928 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:61928 - "GET /assets/index-BQOhkxpp.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:62436 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:62436 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:61928 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:49777 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:53979 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:50460 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:50460 - "GET /assets/index-Dokrlv_B.js HTTP/1.1" 200 OK
+INFO:     ::1:51324 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 200 OK
+INFO:     ::1:50460 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:51324 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:63956 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:63615 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:50884 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:50884 - "GET /assets/index-Dokrlv_B.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:57986 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:57986 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:50884 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:62450 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:53196 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:53819 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:53819 - "GET /assets/index-Dokrlv_B.js HTTP/1.1" 200 OK
+INFO:     ::1:54570 - "GET /assets/index-DC5BYBlp.css HTTP/1.1" 200 OK
+INFO:     ::1:53819 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:54570 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:52645 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:49977 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     ::1:64404 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:51559 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:51559 - "GET /assets/index-ChT0ShkT.js HTTP/1.1" 200 OK
+INFO:     ::1:62993 - "GET /assets/index-CU6ApPwd.css HTTP/1.1" 200 OK
+INFO:     ::1:51559 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:62993 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:64742 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:62862 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:58265 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:58265 - "GET /assets/index-ChT0ShkT.js HTTP/1.1" 200 OK
+INFO:     ::1:63667 - "GET /assets/index-CU6ApPwd.css HTTP/1.1" 200 OK
+INFO:     ::1:63667 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:58265 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:59286 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:58741 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:56070 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     ::1:51482 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:51482 - "GET /assets/index-C1szKzP2.js HTTP/1.1" 200 OK
+INFO:     ::1:50610 - "GET /assets/index-Qtu7mjbm.css HTTP/1.1" 200 OK
+INFO:     ::1:51482 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:50610 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:62171 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:52386 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:63072 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     ::1:59038 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:59038 - "GET /assets/index-C1szKzP2.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:62144 - "GET /assets/index-Qtu7mjbm.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:62144 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:61623 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:59038 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:64214 - "GET /api/baseline HTTP/1.1" 200 OK
+INFO:     ::1:58464 - "GET / HTTP/1.1" 200 OK
+INFO:     ::1:58464 - "GET /assets/index-C1szKzP2.js HTTP/1.1" 304 Not Modified
+INFO:     ::1:52840 - "GET /assets/index-Qtu7mjbm.css HTTP/1.1" 304 Not Modified
+INFO:     ::1:52840 - "GET /api/tournament HTTP/1.1" 200 OK
+INFO:     ::1:59757 - "GET /api/team-stories HTTP/1.1" 200 OK
+INFO:     ::1:58464 - "GET /api/squads HTTP/1.1" 200 OK
+INFO:     ::1:59343 - "GET /api/baseline HTTP/1.1" 200 OK

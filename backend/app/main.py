@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from .models import PredictRequest
 from .refresh_data import refresh_baseline_snapshot, refresh_fixture_snapshot
 from .simulator import ScenarioError, baseline_prediction_payload, predict, tournament_payload
+from .squads import refresh_squad_snapshot, squads_payload
+from .team_stories import team_stories_payload
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -58,13 +60,30 @@ def get_baseline() -> dict:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@app.get("/api/squads")
+def get_squads() -> dict:
+    try:
+        return squads_payload()
+    except ScenarioError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/team-stories")
+def get_team_stories() -> dict:
+    try:
+        return team_stories_payload()
+    except ScenarioError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @app.post("/api/refresh-data")
 def refresh_data() -> dict[str, str]:
     if os.getenv("ALLOW_REFRESH") != "1":
         raise HTTPException(status_code=403, detail="La actualización de datos está desactivada en este despliegue.")
     path = refresh_fixture_snapshot()
     baseline_path = refresh_baseline_snapshot()
-    return {"status": "ok", "path": str(path), "baseline_path": str(baseline_path)}
+    squads_path = refresh_squad_snapshot()
+    return {"status": "ok", "path": str(path), "baseline_path": str(baseline_path), "squads_path": str(squads_path)}
 
 
 @app.get("/weare26.png")

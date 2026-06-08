@@ -57,6 +57,8 @@ describe("buildButterflyEffect", () => {
     expect(effect.biggestLoser?.team).toBe("Argentina");
     expect(effect.chaosScore).toBeGreaterThan(0);
     expect(effect.pressurePoint).toBe("Grupo A");
+    expect(effect.headline).toContain("Cambio de mando");
+    expect(effect.narrative).toContain("Grupo A");
   });
 
   it("formats probability deltas as percentages", () => {

@@ -110,3 +110,61 @@ export type BaselinePrediction = Pick<
   Prediction,
   "data_version" | "settings" | "group_probabilities" | "round_probabilities" | "champion_probabilities"
 >;
+
+export type SquadPlayer = {
+  number: number;
+  position: "GK" | "DF" | "MF" | "FW";
+  player_name: string;
+  first_names: string;
+  last_names: string;
+  shirt_name: string;
+  date_of_birth: string;
+  club: string;
+  height_cm: number;
+};
+
+export type SquadTeam = {
+  team: string;
+  fifa_team_name?: string;
+  code: string;
+  group: string | null;
+  coach: {
+    role: string;
+    name: string;
+    first_names: string;
+    last_names: string;
+    nationality: string;
+  } | null;
+  players: SquadPlayer[];
+};
+
+export type SquadsPayload = {
+  source: {
+    name: string;
+    url: string;
+    generated_at: string;
+  };
+  data_version: string;
+  teams: SquadTeam[];
+};
+
+export type TeamStory = {
+  team: string;
+  code: string;
+  title: string;
+  paragraphs: string[];
+  sources: Array<{
+    label: string;
+    url: string;
+  }>;
+};
+
+export type TeamStoriesPayload = {
+  source: {
+    name: string;
+    generated_at: string;
+    language: string;
+    notes: string;
+  };
+  stories: TeamStory[];
+};

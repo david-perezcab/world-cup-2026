@@ -56,6 +56,34 @@ def test_baseline_payload_is_available_and_matches_tournament_version():
     assert 0.99 <= champion_total <= 1.01
 
 
+def test_squads_payload_has_official_squad_snapshot():
+    response = client.get("/api/squads")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"]["url"].endswith("SquadLists-English.pdf")
+    assert len(payload["teams"]) == 48
+    spain = next(team for team in payload["teams"] if team["team"] == "Spain")
+    assert spain["code"] == "ESP"
+    assert spain["group"] == "H"
+    assert len(spain["players"]) == 26
+    assert spain["players"][0]["position"] in {"GK", "DF", "MF", "FW"}
+
+
+def test_team_stories_payload_has_one_story_per_team():
+    response = client.get("/api/team-stories")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"]["language"] == "es"
+    assert len(payload["stories"]) == 48
+    assert len({story["code"] for story in payload["stories"]}) == 48
+    spain = next(story for story in payload["stories"] if story["code"] == "ESP")
+    assert spain["title"]
+    assert len(spain["paragraphs"]) >= 2
+    assert spain["sources"][0]["url"].startswith("https://")
+
+
 def test_local_world_cup_logo_is_served():
     response = client.get("/weare26.png")
 
