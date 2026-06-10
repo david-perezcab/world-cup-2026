@@ -19,6 +19,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 WORLD_CUP_LOGO = DATA_DIR / "weare26.png"
+WORLD_CUP_INTRO_ART = DATA_DIR / "worldcup_intro_art.jpg"
+WORLD_CUP_INTRO_BG = DATA_DIR / "image.png"
+WORLD_MAP_BG = DATA_DIR / "world_map_bg.png"
 
 app = FastAPI(title="Predictor Mundial 2026", version="0.1.0")
 
@@ -90,7 +93,28 @@ def refresh_data() -> dict[str, str]:
 def get_world_cup_logo() -> FileResponse:
     if not WORLD_CUP_LOGO.exists():
         raise HTTPException(status_code=404, detail="Logo no encontrado.")
-    return FileResponse(WORLD_CUP_LOGO, media_type="image/png")
+    return FileResponse(WORLD_CUP_LOGO, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/worldcup_intro_art.jpg")
+def get_world_cup_intro_art() -> FileResponse:
+    if not WORLD_CUP_INTRO_ART.exists():
+        raise HTTPException(status_code=404, detail="Imagen de portada no encontrada.")
+    return FileResponse(WORLD_CUP_INTRO_ART, media_type="image/jpeg")
+
+
+@app.get("/worldcup_intro_bg.png")
+def get_world_cup_intro_bg() -> FileResponse:
+    if not WORLD_CUP_INTRO_BG.exists():
+        raise HTTPException(status_code=404, detail="Imagen de portada no encontrada.")
+    return FileResponse(WORLD_CUP_INTRO_BG, media_type="image/png")
+
+
+@app.get("/world_map_bg.png")
+def get_world_map_bg() -> FileResponse:
+    if not WORLD_MAP_BG.exists():
+        raise HTTPException(status_code=404, detail="Mapa no encontrado.")
+    return FileResponse(WORLD_MAP_BG, media_type="image/png")
 
 
 if FRONTEND_DIST.exists():

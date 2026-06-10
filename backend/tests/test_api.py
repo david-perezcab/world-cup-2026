@@ -92,6 +92,22 @@ def test_local_world_cup_logo_is_served():
     assert response.content.startswith(b"\x89PNG")
 
 
+def test_local_world_cup_intro_art_is_served():
+    response = client.get("/worldcup_intro_art.jpg")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert response.content.startswith(b"\xff\xd8")
+
+
+def test_local_world_cup_intro_background_is_served():
+    response = client.get("/worldcup_intro_bg.png")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG")
+
+
 def test_unknown_api_route_returns_json_404():
     response = client.get("/api/not-real")
 

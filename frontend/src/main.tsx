@@ -18,7 +18,7 @@ import type {
 } from "./types";
 import "./styles.css";
 
-type Tab = "groups" | "knockout" | "predictions" | "squads";
+type Tab = "intro" | "groups" | "knockout" | "predictions" | "squads";
 type RatingContext = {
   ratings: Record<string, number>;
   groupRatings: Record<string, number[]>;
@@ -26,6 +26,10 @@ type RatingContext = {
 };
 type SimulatorProfile = {
   surprise: number;
+};
+type MapPoint = {
+  x: number;
+  y: number;
 };
 
 const NAV_ITEMS: Array<{ tab: Tab; label: string }> = [
@@ -36,6 +40,7 @@ const NAV_ITEMS: Array<{ tab: Tab; label: string }> = [
 ];
 
 const TAB_TITLES: Record<Tab, string> = {
+  intro: "",
   groups: "Fase de grupos",
   knockout: "",
   predictions: "Panel de predicciones",
@@ -53,7 +58,59 @@ const BRACKET_ROUNDS = [
   "Round of 16",
   "Round of 32"
 ];
-const WORLD_CUP_26_LOGO = "/weare26.png";
+const WORLD_CUP_26_LOGO = "/weare26.png?v=20260609-165953";
+const WORLD_CUP_INTRO_BG = "/worldcup_intro_bg.png";
+const WORLD_MAP_BG = "/world_map_bg.png";
+const WORLD_MAP_POINTS: Record<string, MapPoint> = {
+  ALG: { x: 53.0, y: 52.4 },
+  ARG: { x: 39.0, y: 87.8 },
+  AUS: { x: 83.0, y: 78.0 },
+  AUT: { x: 56.3, y: 39.4 },
+  BEL: { x: 51.5, y: 37.2 },
+  BIH: { x: 60.7, y: 45.1 },
+  BRA: { x: 42.3, y: 72.1 },
+  CAN: { x: 21.8, y: 28.0 },
+  CIV: { x: 50.8, y: 64.4 },
+  COD: { x: 60.6, y: 70.5 },
+  COL: { x: 32.0, y: 64.8 },
+  CPV: { x: 43.7, y: 59.2 },
+  CRO: { x: 58.6, y: 42.5 },
+  CUW: { x: 33.0, y: 58.5 },
+  CZE: { x: 56.9, y: 34.1 },
+  ECU: { x: 27.7, y: 68.7 },
+  EGY: { x: 62.0, y: 54.7 },
+  ENG: { x: 50.1, y: 34.4 },
+  ESP: { x: 48.8, y: 45.0 },
+  FRA: { x: 51.0, y: 40.8 },
+  GER: { x: 54.2, y: 35.6 },
+  GHA: { x: 54.2, y: 63.7 },
+  HAI: { x: 31.0, y: 55.4 },
+  IRN: { x: 70.6, y: 49.7 },
+  IRQ: { x: 66.8, y: 51.1 },
+  JOR: { x: 64.3, y: 53.2 },
+  JPN: { x: 88.4, y: 47.8 },
+  KOR: { x: 86.0, y: 44.5 },
+  KSA: { x: 65.4, y: 58.5 },
+  MAR: { x: 49.2, y: 50.1 },
+  MEX: { x: 19.8, y: 51.8 },
+  NED: { x: 52.5, y: 32.6 },
+  NOR: { x: 54.7, y: 22.4 },
+  NZL: { x: 91.3, y: 85.8 },
+  PAN: { x: 28.7, y: 59.5 },
+  PAR: { x: 38.0, y: 79.5 },
+  POR: { x: 46.9, y: 43.4 },
+  QAT: { x: 68.5, y: 56.2 },
+  RSA: { x: 60.9, y: 82.2 },
+  SCO: { x: 48.7, y: 29.7 },
+  SEN: { x: 48.4, y: 61.0 },
+  SUI: { x: 53.4, y: 41.3 },
+  SWE: { x: 59.2, y: 25.5 },
+  TUN: { x: 56.9, y: 49.8 },
+  TUR: { x: 64.3, y: 45.8 },
+  URU: { x: 42.8, y: 86.2 },
+  USA: { x: 22.8, y: 37.8 },
+  UZB: { x: 74.0, y: 43.0 }
+};
 const BRACKET_DEFAULT_CARD_WIDTH = 105;
 const BRACKET_COLUMN_GAP = 5;
 const BRACKET_ROW_HEIGHT = 35;
@@ -64,7 +121,8 @@ const BRACKET_MIN_CARD_WIDTH = 58;
 function App() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [facts, setFacts] = useState<Record<number, FactDraft>>({});
-  const [activeTab, setActiveTab] = useState<Tab>(() => tabFromSearch(window.location.search) ?? "squads");
+  const [activeTab, setActiveTab] = useState<Tab>(() => tabFromSearch(window.location.search) ?? "intro");
+  const [selectedSquadTeam, setSelectedSquadTeam] = useState("");
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [baseline, setBaseline] = useState<BaselinePrediction | null>(null);
   const [baselineError, setBaselineError] = useState<string | null>(null);
@@ -256,6 +314,11 @@ function App() {
     setShareStatus(null);
   }
 
+  function openSquadTeam(team: string) {
+    setSelectedSquadTeam(team);
+    setActiveTab("squads");
+  }
+
   async function copyShareLink() {
     const encoded = encodeScenario(facts);
     const url = `${window.location.origin}${window.location.pathname}#scenario=${encoded}`;
@@ -334,7 +397,7 @@ function App() {
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <section className={`content-shell ${activeTab === "knockout" ? "knockout-content" : ""}`}>
-        {activeTab !== "knockout" && (
+        {activeTab !== "knockout" && activeTab !== "intro" && (
           <header className="topbar">
             <div>
               <p className="eyebrow">Mundial FIFA 2026</p>
@@ -344,6 +407,8 @@ function App() {
         )}
 
         {error && <section className="error-panel">{error}</section>}
+
+        {activeTab === "intro" && <IntroView teams={squads?.teams ?? []} onSelectTeam={openSquadTeam} />}
 
         {activeTab === "groups" && (
           <GroupsView
@@ -387,7 +452,14 @@ function App() {
         )}
 
         {activeTab === "squads" && (
-          <SquadsView squads={squads} error={squadsError} teamStories={teamStories} storiesError={teamStoriesError} />
+          <SquadsView
+            squads={squads}
+            error={squadsError}
+            teamStories={teamStories}
+            storiesError={teamStoriesError}
+            selectedTeam={selectedSquadTeam}
+            setSelectedTeam={setSelectedSquadTeam}
+          />
         )}
         </section>
     </main>
@@ -404,9 +476,14 @@ function Sidebar({
   return (
     <aside className="side-menu">
       <div className="side-header">
-        <div className="brand-mark">
+        <button
+          className={`brand-mark ${activeTab === "intro" ? "active" : ""}`}
+          type="button"
+          onClick={() => setActiveTab("intro")}
+          aria-label="Ir a la introducciÃ³n"
+        >
           <img src={WORLD_CUP_26_LOGO} alt="Logo del Mundial FIFA 26" />
-        </div>
+        </button>
       </div>
 
       <nav className="side-nav" aria-label="Vistas de predicción">
@@ -428,14 +505,17 @@ function SquadsView({
   squads,
   error,
   teamStories,
-  storiesError
+  storiesError,
+  selectedTeam,
+  setSelectedTeam
 }: {
   squads: SquadsPayload | null;
   error: string | null;
   teamStories: TeamStoriesPayload | null;
   storiesError: string | null;
+  selectedTeam: string;
+  setSelectedTeam: (team: string) => void;
 }) {
-  const [selectedTeam, setSelectedTeam] = useState("");
   const [positionFilter, setPositionFilter] = useState<"ALL" | SquadTeam["players"][number]["position"]>("ALL");
 
   if (error) {
@@ -496,7 +576,12 @@ function SquadsView({
         </a>
       </article>
 
-      {!currentTeam && <SquadsIntro teams={teams} onSelectTeam={selectTeam} />}
+      {!currentTeam && (
+        <section className="empty-state">
+          <h2>Elige una selección</h2>
+          <p>Pincha un país en el mapa para ver su convocatoria oficial, historia y jugadores por posición.</p>
+        </section>
+      )}
 
       {currentTeam && (
         <>
@@ -583,14 +668,11 @@ function SquadsView({
   );
 }
 
-function SquadsIntro({ teams, onSelectTeam }: { teams: SquadTeam[]; onSelectTeam: (team: string) => void }) {
-  const quickTeams = ["MEX", "CAN", "USA", "ESP", "CUW", "CPV"]
-    .map((code) => teams.find((team) => team.code === code))
-    .filter((team): team is SquadTeam => Boolean(team));
-
+function IntroView({ teams, onSelectTeam }: { teams: SquadTeam[]; onSelectTeam: (team: string) => void }) {
   return (
     <section className="squads-intro">
       <article className="wide-panel squads-intro-hero">
+        <img className="squads-intro-bg" src={WORLD_CUP_INTRO_BG} alt="" aria-hidden="true" />
         <div className="squads-intro-copy">
           <p className="panel-kicker">Mundial FIFA 2026</p>
           <h2>El Mundial más grande empieza aquí</h2>
@@ -598,9 +680,6 @@ function SquadsIntro({ teams, onSelectTeam }: { teams: SquadTeam[]; onSelectTeam
             Tres países anfitriones, 48 selecciones y un formato nuevo que convierte cada grupo en una historia abierta.
             Explora convocatorias oficiales, relatos curiosos y los caminos que pueden cambiar todo el torneo.
           </p>
-        </div>
-        <div className="squads-intro-logo" aria-label="Logo oficial We Are 26">
-          <img src={WORLD_CUP_26_LOGO} alt="Logo oficial We Are 26" />
         </div>
       </article>
 
@@ -638,19 +717,50 @@ function SquadsIntro({ teams, onSelectTeam }: { teams: SquadTeam[]; onSelectTeam
         <header className="panel-header">
           <div>
             <p className="panel-kicker">Empieza explorando</p>
-            <h2>Selecciona un país</h2>
+            <h2>Pincha un país en el mapa</h2>
           </div>
         </header>
-        <div className="intro-team-grid">
-          {quickTeams.map((team) => (
-            <button type="button" key={team.code} onClick={() => onSelectTeam(team.team)}>
-              <TeamName team={team.team} />
-              <span>Grupo {team.group ?? "-"}</span>
-            </button>
-          ))}
-        </div>
+        <WorldMapExplorer teams={teams} onSelectTeam={onSelectTeam} />
       </article>
     </section>
+  );
+}
+
+function WorldMapExplorer({ teams, onSelectTeam }: { teams: SquadTeam[]; onSelectTeam: (team: string) => void }) {
+  const mapTeams = teams
+    .filter((team) => WORLD_MAP_POINTS[team.code])
+    .sort((left, right) => displayTeamNameFor(left.team).localeCompare(displayTeamNameFor(right.team), "es"));
+
+  if (mapTeams.length === 0) {
+    return <p className="map-loading">Cargando selecciones...</p>;
+  }
+
+  return (
+    <div className="world-map-shell">
+      <div className="world-map-canvas" aria-label="Mapa interactivo de selecciones del Mundial 2026">
+        <img className="world-map-image" src={WORLD_MAP_BG} alt="" aria-hidden="true" />
+
+        {mapTeams.map((team) => {
+          const point = WORLD_MAP_POINTS[team.code];
+          const flag = flagUrlFor(team.team);
+          return (
+            <button
+              className="map-country-marker"
+              key={team.code}
+              style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              type="button"
+              onClick={() => onSelectTeam(team.team)}
+              aria-label={`Abrir ${displayTeamNameFor(team.team)}`}
+              title={`${displayTeamNameFor(team.team)} - Grupo ${team.group ?? "-"}`}
+            >
+              {flag ? <img src={flag} alt="" loading="lazy" /> : <span>{team.code}</span>}
+              <strong>{team.code}</strong>
+            </button>
+          );
+        })}
+      </div>
+      <p className="world-map-hint">Cada marcador abre la convocatoria, la historia y los jugadores de esa selección.</p>
+    </div>
   );
 }
 
@@ -2232,7 +2342,9 @@ function bracketY(slot: number, rowHeight: number) {
 
 function tabFromSearch(search: string): Tab | null {
   const view = new URLSearchParams(search).get("view");
-  return view === "groups" || view === "knockout" || view === "predictions" || view === "squads" ? view : null;
+  return view === "intro" || view === "groups" || view === "knockout" || view === "predictions" || view === "squads"
+    ? view
+    : null;
 }
 
 function formatPercent(value: number) {
